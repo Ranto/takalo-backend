@@ -1,0 +1,54 @@
+package ara.project.takalo.category.application.service;
+
+import ara.project.takalo.category.application.port.in.ProductCategoryServicePort;
+import ara.project.takalo.category.domain.exception.ResourceNotFoundException;
+import ara.project.takalo.category.domain.model.ProductCategory;
+import ara.project.takalo.category.domain.repository.ProductCategoryRepository;
+import ara.project.takalo.category.domain.utility.PagedResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class ProductCategoryService implements ProductCategoryServicePort {
+    private final ProductCategoryRepository repository;
+
+    @Override
+    public ProductCategory create(ProductCategory category) {
+        return repository.save(category);
+    }
+
+    @Override
+    public ProductCategory update(UUID id, ProductCategory category) {
+        return repository.findById(id)
+                .map(existing -> {
+                    ProductCategory updated = new ProductCategory(id, category.label(), category.description());
+                    return repository.save(updated);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
+    }
+
+    @Override
+    public void delete(UUID id) {
+        repository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public ProductCategory getById(UUID id) {
+        return repository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PagedResponse<ProductCategory> search(String label, int page, int limit) {
+        if (label == null || label.isBlank()) {
+            return repository.findAll(page, limit);
+        }
+        return repository.findByLabel(label, page, limit);
+    }
+}

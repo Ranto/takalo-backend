@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: takalo-db
+    environment:
+      POSTGRES_DB: takalo_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - takalo-network
+
+volumes:
+  pgdata:
+
+networks:
+  takalo-network:
+    driver: bridge
