@@ -1,4 +1,4 @@
-package ara.project.takalo.category.domain.utility;
+package ara.project.takalo.shared.domain.utility;
 
 import java.util.List;
 import java.util.function.Function;

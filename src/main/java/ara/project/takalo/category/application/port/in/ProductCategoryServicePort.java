@@ -1,7 +1,7 @@
 package ara.project.takalo.category.application.port.in;
 
 import ara.project.takalo.category.domain.model.ProductCategory;
-import ara.project.takalo.category.domain.utility.PagedResponse;
+import ara.project.takalo.shared.domain.utility.PagedResponse;
 
 import java.util.UUID;
 
