@@ -1,4 +1,4 @@
-package ara.project.takalo.category.infrastructure.web.dto;
+package ara.project.takalo.shared.infrastructure.rest.dto;
 
 import java.time.LocalDateTime;
 

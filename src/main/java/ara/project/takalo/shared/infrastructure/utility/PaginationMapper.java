@@ -1,6 +1,6 @@
-package ara.project.takalo.category.infrastructure.utility;
+package ara.project.takalo.shared.infrastructure.utility;
 
-import ara.project.takalo.category.domain.utility.PagedResponse;
+import ara.project.takalo.shared.domain.utility.PagedResponse;
 import org.springframework.data.domain.Page;
 
 import java.util.function.Function;

@@ -1,10 +1,10 @@
-package ara.project.takalo.category.infrastructure.web;
+package ara.project.takalo.category.infrastructure.rest;
 
 import ara.project.takalo.category.application.port.in.ProductCategoryServicePort;
 import ara.project.takalo.category.domain.model.ProductCategory;
-import ara.project.takalo.category.domain.utility.PagedResponse;
-import ara.project.takalo.category.infrastructure.web.dto.ProductCategoryRequest;
-import ara.project.takalo.category.infrastructure.web.dto.ProductCategoryResponse;
+import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryRequest;
+import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryResponse;
+import ara.project.takalo.shared.domain.utility.PagedResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;

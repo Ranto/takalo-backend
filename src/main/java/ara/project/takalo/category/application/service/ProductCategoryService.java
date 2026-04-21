@@ -1,10 +1,10 @@
 package ara.project.takalo.category.application.service;
 
 import ara.project.takalo.category.application.port.in.ProductCategoryServicePort;
-import ara.project.takalo.category.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.domain.repository.ProductCategoryRepository;
-import ara.project.takalo.category.domain.utility.PagedResponse;
+import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
+import ara.project.takalo.shared.domain.utility.PagedResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,7 +40,7 @@ public class ProductCategoryService implements ProductCategoryServicePort {
     @Transactional(readOnly = true)
     @Override
     public ProductCategory getById(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Category not found."));
     }
 
     @Transactional(readOnly = true)
