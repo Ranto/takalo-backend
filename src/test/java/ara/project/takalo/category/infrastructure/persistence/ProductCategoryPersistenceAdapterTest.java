@@ -2,6 +2,7 @@ package ara.project.takalo.category.infrastructure.persistence;
 
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.infrastructure.persistence.entities.ProductCategoryEntity;
+import ara.project.takalo.category.infrastructure.persistence.mappers.ProductCategoryMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
