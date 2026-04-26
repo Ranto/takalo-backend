@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public interface JpaProductRepository extends JpaRepository<ProductEntity, UUID> {
@@ -28,4 +29,12 @@ public interface JpaProductRepository extends JpaRepository<ProductEntity, UUID>
                     """
     )
     Page<ProductEntity> findAllWithNameOrCategoryIdIn(@Param("name") String name, @Param("categoryIds") List<UUID> categoryIds, Pageable pageable);
+
+    interface ProductIdAndName {
+        UUID getId();
+        String getName();
+    }
+
+    @Query("SELECT p.id as id, p.name as name FROM ProductEntity p WHERE p.id IN :ids")
+    List<ProductIdAndName> findNamesById(@Param("ids") Set<UUID> ids);
 }

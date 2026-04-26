@@ -13,8 +13,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -65,5 +68,18 @@ public class ProductPersistenceAdapter implements ProductRepository {
     @Override
     public boolean existsByName(String name) {
         return repository.existsByNameIgnoreCase(name);
+    }
+
+    @Override
+    public Map<UUID, String> getProductNames(Set<UUID> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return repository.findNamesById(productIds).stream()
+                .collect(Collectors.toMap(
+                        JpaProductRepository.ProductIdAndName::getId,
+                        JpaProductRepository.ProductIdAndName::getName
+                ));
     }
 }
