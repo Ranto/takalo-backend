@@ -2,6 +2,7 @@ package ara.project.takalo.category.infrastructure.persistence;
 
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.application.port.out.ProductCategoryRepository;
+import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.category.infrastructure.persistence.entities.ProductCategoryEntity;
 import ara.project.takalo.category.infrastructure.persistence.mappers.ProductCategoryMapper;
@@ -50,9 +51,10 @@ public class ProductCategoryPersistenceAdapter implements ProductCategoryReposit
 
     @Override
     public void deleteById(UUID id) {
-        if (repository.existsById(id)) {
-            repository.deleteById(id);
+        if (!repository.existsById(id)) {
+            throw new ResourceNotFoundException("Category not found with id: " + id);
         }
+        repository.deleteById(id);
     }
 
     @Override

@@ -2,6 +2,7 @@ package ara.project.takalo.product.infrastructure.persistence;
 
 import ara.project.takalo.product.domain.model.Product;
 import ara.project.takalo.product.application.port.out.ProductRepository;
+import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.product.infrastructure.persistence.entities.ProductEntity;
 import ara.project.takalo.product.infrastructure.persistence.mappers.ProductMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
@@ -47,9 +48,10 @@ public class ProductPersistenceAdapter implements ProductRepository {
 
     @Override
     public void deleteById(UUID id) {
-        if (repository.existsById(id)) {
-            repository.deleteById(id);
+        if (!repository.existsById(id)) {
+            throw new ResourceNotFoundException("Product not found with id: " + id);
         }
+        repository.deleteById(id);
     }
 
     @Override

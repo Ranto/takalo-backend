@@ -56,6 +56,4 @@ public class ProductEntity {
     @LastModifiedDate
     @Column(nullable = false)
     private Instant updatedAt;
-
-    private Instant deletedAt;
 }
