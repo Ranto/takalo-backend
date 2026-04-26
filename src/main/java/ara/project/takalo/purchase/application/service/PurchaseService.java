@@ -36,11 +36,10 @@ public class PurchaseService implements PurchaseServicePort {
     @Override
     @Transactional
     public Purchase update(UUID id, Purchase purchase) {
-        repository.findById(id).map(existing -> {
-            Purchase updated = new Purchase(id, purchase.purchaseDate(), purchase.items());
-            return repository.save(updated);
-        }).orElseThrow(() -> new ResourceNotFoundException("Purchase not found"));
-        return null;
+        return repository.findById(id).map(existing -> {
+            Purchase purchaseToSave = getPurchaseWithProductName(purchase);
+            return repository.save(purchaseToSave);
+        }).orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
     }
 
     @Override
@@ -52,7 +51,7 @@ public class PurchaseService implements PurchaseServicePort {
     @Override
     @Transactional(readOnly = true)
     public Purchase getById(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Purchase not found"));
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
     }
 
     @Override
