@@ -4,7 +4,9 @@ import ara.project.takalo.product.domain.model.Product;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface ProductServicePort {
@@ -20,4 +22,6 @@ public interface ProductServicePort {
     PagedResponse<Product> searchByCategoriesOrName(List<UUID> categoryIds, String name, int page, int limit);
 
     PagedResponse<Product> findAll(int page, int size);
+
+    Map<UUID, String> getProductNames(Set<UUID> ids);
 }
