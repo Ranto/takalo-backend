@@ -3,6 +3,7 @@ package ara.project.takalo.category.infrastructure.persistence;
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.infrastructure.persistence.entities.ProductCategoryEntity;
 import ara.project.takalo.category.infrastructure.persistence.mappers.ProductCategoryMapper;
+import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -131,11 +133,13 @@ class ProductCategoryPersistenceAdapterTest {
     }
 
     @Test
-    void deleteById_whenAbsent_doesNotCallDelete() {
+    void deleteById_whenAbsent_throwsResourceNotFoundException() {
         UUID id = UUID.randomUUID();
         when(jpaRepository.existsById(id)).thenReturn(false);
 
-        adapter.deleteById(id);
+        assertThatThrownBy(() -> adapter.deleteById(id))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining(id.toString());
 
         verify(jpaRepository, never()).deleteById(any(UUID.class));
     }

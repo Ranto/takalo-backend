@@ -3,12 +3,15 @@ package ara.project.takalo.category.infrastructure.rest;
 import ara.project.takalo.category.application.port.in.ProductCategoryServicePort;
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryRequest;
+import ara.project.takalo.category.infrastructure.rest.mapper.ProductCategoryWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductCategoryController.class)
+@Import(ProductCategoryWebMapper.class)
 class ProductCategoryControllerTest {
 
     @Autowired
@@ -38,6 +42,9 @@ class ProductCategoryControllerTest {
 
     @MockitoBean
     private ProductCategoryServicePort service;
+
+    @MockitoBean
+    private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
     @Test
     void create_returns201AndPassesDomainWithNullId() throws Exception {
