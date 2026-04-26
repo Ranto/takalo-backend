@@ -9,7 +9,6 @@ import ara.project.takalo.shared.domain.utility.PagedResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,8 +41,8 @@ public class ProductService implements ProductServicePort {
                     product.name(),
                     product.categoryId(),
                     product.categoryLabel(),
-                    existing.createdAt(),
-                    Instant.now());
+                    null,
+                    null);
             return repository.save(toUpdate);
         }).orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
