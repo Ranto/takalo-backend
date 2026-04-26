@@ -106,7 +106,7 @@ class ProductWebMapperTest {
         PagedResponse<ProductResponse> result = mapper.toResponses(page);
 
         assertThat(result.content()).hasSize(1);
-        assertThat(result.content().get(0).category().label()).isNull();
+        assertThat(result.content().getFirst().category().label()).isNull();
         verify(categoryServicePort, never()).getCategoryLabels(org.mockito.ArgumentMatchers.any());
     }
 
