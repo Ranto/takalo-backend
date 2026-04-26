@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -50,5 +52,11 @@ public class ProductCategoryService implements ProductCategoryServicePort {
             return repository.findAll(page, limit);
         }
         return repository.findByLabel(label, page, limit);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Map<UUID, String> getCategoryLabels(Set<UUID> ids) {
+        return repository.getCategoryLabels(ids);
     }
 }

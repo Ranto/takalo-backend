@@ -53,7 +53,7 @@ public class ProductController {
             @RequestParam(defaultValue = "10") int size) {
 
         var pagedDomain = productServicePort.findAll(page, size);
-        PagedResponse<ProductResponse> response = pagedDomain.map(webMapper::toResponse);
+        PagedResponse<ProductResponse> response = webMapper.toResponses(pagedDomain);
         return ResponseEntity.ok(response);
     }
 
@@ -65,7 +65,7 @@ public class ProductController {
             @RequestParam(defaultValue = "10") int size) {
 
         PagedResponse<Product> pagedDomain = productServicePort.searchByCategoriesOrName(categoryIds, name, page, size);
-        PagedResponse<ProductResponse> response = pagedDomain.map(webMapper::toResponse);
+        PagedResponse<ProductResponse> response = webMapper.toResponses(pagedDomain);
         return ResponseEntity.ok(response);
     }
 
@@ -74,7 +74,6 @@ public class ProductController {
         Product toUpdate = new Product(id,
                 request.name(),
                 request.categoryId(),
-                null,
                 null,
                 null);
         Product updated = productServicePort.update(id, toUpdate);

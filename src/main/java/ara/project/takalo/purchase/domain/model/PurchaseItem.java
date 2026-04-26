@@ -4,6 +4,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
+/**
+ * @param productName Snapshot du nom du produit au moment de l'achat. Figé volontairement
+ *                    pour rester stable même si le produit est renommé ou supprimé par la suite.
+ */
 public record PurchaseItem(UUID productId,
                            Double quantity,
                            BigDecimal unitPrice,

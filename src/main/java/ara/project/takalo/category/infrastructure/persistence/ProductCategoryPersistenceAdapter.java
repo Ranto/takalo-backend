@@ -10,8 +10,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -49,5 +52,17 @@ public class ProductCategoryPersistenceAdapter implements ProductCategoryReposit
         if (repository.existsById(id)) {
             repository.deleteById(id);
         }
+    }
+
+    @Override
+    public Map<UUID, String> getCategoryLabels(Set<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return repository.findLabelsById(ids).stream()
+                .collect(Collectors.toMap(
+                        JpaProductCategoryRepository.CategoryIdAndLabel::getId,
+                        JpaProductCategoryRepository.CategoryIdAndLabel::getLabel
+                ));
     }
 }

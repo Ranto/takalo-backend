@@ -40,7 +40,6 @@ public class ProductService implements ProductServicePort {
             Product toUpdate = new Product(id,
                     product.name(),
                     product.categoryId(),
-                    product.categoryLabel(),
                     null,
                     null);
             return repository.save(toUpdate);
