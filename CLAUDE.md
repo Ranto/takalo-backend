@@ -36,14 +36,14 @@ The codebase follows **hexagonal (ports-and-adapters) architecture**, organized 
 <context>/
   application/
     port/in/      <Name>ServicePort        — inbound use-case interface
+    port/out/     <Name>Repository         — outbound repository port (interface)
     service/     <Name>Service             — implements the port, @Transactional
   domain/
     model/       <Name>                    — immutable Java record (the domain model)
-    repository/  <Name>Repository          — outbound repository port (interface)
   infrastructure/
     persistence/
       Jpa<Name>Repository                  — Spring Data JPA interface (entity-typed)
-      <Name>PersistenceAdapter             — implements the domain repository port
+      <Name>PersistenceAdapter             — implements the outbound repository port
       <Name>Mapper                         — domain ↔ JPA entity
       entities/<Name>Entity                — JPA @Entity (DB-shaped, mutable)
     rest/
@@ -52,7 +52,7 @@ The codebase follows **hexagonal (ports-and-adapters) architecture**, organized 
       mapper/<Name>WebMapper               — domain ↔ DTO (when non-trivial)
 ```
 
-**Key invariant: the domain layer never imports JPA, Spring Data, or web types.** Controllers and persistence adapters sit at the edges and translate to/from domain records via mappers. Services depend only on the domain repository *port*; the JPA-backed adapter is wired in by Spring at runtime.
+**Key invariant: the domain layer never imports JPA, Spring Data, or web types.** Controllers and persistence adapters sit at the edges and translate to/from domain records via mappers. Services depend only on the outbound repository *port* (`application/port/out/`); the JPA-backed adapter is wired in by Spring at runtime. Outbound ports live in `application/port/out/` (canonical hexagonal placement) — do not put repository interfaces under `domain/`.
 
 **Cross-context calls go through inbound ports, not repositories.** Example: `PurchaseService` injects `ProductServicePort` (not `ProductRepository`) to enrich purchase items with product names — see `purchase/application/service/PurchaseService.java`. When adding a new cross-context dependency, add a method to the existing port rather than reaching into another context's persistence layer.
 

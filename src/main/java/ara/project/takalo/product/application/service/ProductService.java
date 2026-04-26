@@ -2,7 +2,7 @@ package ara.project.takalo.product.application.service;
 
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.product.domain.model.Product;
-import ara.project.takalo.product.domain.repository.ProductRepository;
+import ara.project.takalo.product.application.port.out.ProductRepository;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;

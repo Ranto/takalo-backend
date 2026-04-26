@@ -4,7 +4,7 @@ import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItem;
-import ara.project.takalo.purchase.domain.repository.PurchaseRepository;
+import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import lombok.RequiredArgsConstructor;

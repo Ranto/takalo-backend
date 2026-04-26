@@ -1,7 +1,7 @@
 package ara.project.takalo.purchase.infrastructure.persistence;
 
 import ara.project.takalo.purchase.domain.model.Purchase;
-import ara.project.takalo.purchase.domain.repository.PurchaseRepository;
+import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.infrastructure.persistence.entities.PurchaseEntity;
 import ara.project.takalo.purchase.infrastructure.persistence.mappers.PurchaseMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
