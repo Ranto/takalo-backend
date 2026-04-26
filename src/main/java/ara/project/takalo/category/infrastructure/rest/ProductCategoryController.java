@@ -4,7 +4,9 @@ import ara.project.takalo.category.application.port.in.ProductCategoryServicePor
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryRequest;
 import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryResponse;
+import ara.project.takalo.category.infrastructure.rest.mapper.ProductCategoryWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,40 +27,36 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductCategoryController {
     private final ProductCategoryServicePort service;
+    private final ProductCategoryWebMapper webMapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ProductCategoryResponse create(@RequestBody ProductCategoryRequest request) {
-        ProductCategory domainToSave = new ProductCategory(null, request.label(), request.description());
-        ProductCategory saved = service.create(domainToSave);
-        return mapToResponse(saved);
+    public ProductCategoryResponse create(@Valid @RequestBody ProductCategoryRequest request) {
+        ProductCategory saved = service.create(webMapper.toDomain(request));
+        return webMapper.toResponse(saved);
     }
 
     @GetMapping("/{id}")
     public ProductCategoryResponse getById(@PathVariable UUID id) {
-        return mapToResponse(service.getById(id));
+        return webMapper.toResponse(service.getById(id));
     }
 
     @GetMapping
     public PagedResponse<ProductCategoryResponse> search(@RequestParam(required = false) String label,
                                                          @RequestParam(defaultValue = "0") int page,
                                                          @RequestParam(defaultValue = "10") int size) {
-        return service.search(label, page, size).map(this::mapToResponse);
+        return service.search(label, page, size).map(webMapper::toResponse);
     }
 
     @PutMapping("/{id}")
-    public ProductCategoryResponse update(@PathVariable UUID id, @RequestBody ProductCategoryRequest request) {
-        ProductCategory domain = new ProductCategory(id, request.label(), request.description());
-        return mapToResponse(service.update(id, domain));
+    public ProductCategoryResponse update(@PathVariable UUID id, @Valid @RequestBody ProductCategoryRequest request) {
+        ProductCategory updated = service.update(id, webMapper.toDomain(id, request));
+        return webMapper.toResponse(updated);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
         service.delete(id);
-    }
-
-    private ProductCategoryResponse mapToResponse(ProductCategory domain) {
-        return new ProductCategoryResponse(domain.id(), domain.label(), domain.description());
     }
 }

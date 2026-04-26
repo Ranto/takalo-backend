@@ -4,6 +4,7 @@ import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.application.port.out.ProductCategoryRepository;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.category.infrastructure.persistence.entities.ProductCategoryEntity;
+import ara.project.takalo.category.infrastructure.persistence.mappers.ProductCategoryMapper;
 import ara.project.takalo.shared.infrastructure.utility.PaginationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

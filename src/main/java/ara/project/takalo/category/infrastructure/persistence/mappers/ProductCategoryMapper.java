@@ -1,4 +1,4 @@
-package ara.project.takalo.category.infrastructure.persistence;
+package ara.project.takalo.category.infrastructure.persistence.mappers;
 
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.infrastructure.persistence.entities.ProductCategoryEntity;

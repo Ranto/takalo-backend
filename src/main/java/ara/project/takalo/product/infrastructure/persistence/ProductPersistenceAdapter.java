@@ -3,6 +3,7 @@ package ara.project.takalo.product.infrastructure.persistence;
 import ara.project.takalo.product.domain.model.Product;
 import ara.project.takalo.product.application.port.out.ProductRepository;
 import ara.project.takalo.product.infrastructure.persistence.entities.ProductEntity;
+import ara.project.takalo.product.infrastructure.persistence.mappers.ProductMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.shared.infrastructure.utility.PaginationMapper;
 import lombok.RequiredArgsConstructor;

@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class PurchaseService implements PurchaseServicePort {
 
@@ -27,14 +28,12 @@ public class PurchaseService implements PurchaseServicePort {
     private final ProductServicePort productService;
 
     @Override
-    @Transactional
     public Purchase create(Purchase purchase) {
         Purchase purchaseToSave = getPurchaseWithProductName(purchase);
         return repository.save(purchaseToSave);
     }
 
     @Override
-    @Transactional
     public Purchase update(UUID id, Purchase purchase) {
         return repository.findById(id).map(existing -> {
             Purchase purchaseToSave = getPurchaseWithProductName(purchase);
@@ -43,7 +42,6 @@ public class PurchaseService implements PurchaseServicePort {
     }
 
     @Override
-    @Transactional
     public void delete(UUID id) {
         repository.deleteById(id);
     }

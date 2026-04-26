@@ -41,10 +41,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getById(@PathVariable UUID id) {
-        return productServicePort.getById(id)
-                .map(webMapper::toResponse)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(webMapper.toResponse(productServicePort.getById(id)));
     }
 
     @GetMapping
@@ -70,7 +67,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ProductResponse update(@PathVariable UUID id, @RequestBody ProductRequest request) {
+    public ProductResponse update(@PathVariable UUID id, @Valid @RequestBody ProductRequest request) {
         Product toUpdate = new Product(id,
                 request.name(),
                 request.categoryId(),
