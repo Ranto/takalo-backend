@@ -18,13 +18,12 @@ public interface JpaProductRepository extends JpaRepository<ProductEntity, UUID>
     @Query(
             value = """
                     SELECT p FROM ProductEntity p
-                            JOIN FETCH p.category
-                            WHERE (:categoryIds IS NULL OR p.category.id IN :categoryIds)
+                            WHERE (:categoryIds IS NULL OR p.categoryId IN :categoryIds)
                               AND (:name IS NULL OR p.name ILIKE %:name%)
                     """,
             countQuery = """
                     SELECT count(p) FROM ProductEntity p
-                            WHERE (:categoryIds IS NULL OR p.category.id IN :categoryIds)
+                            WHERE (:categoryIds IS NULL OR p.categoryId IN :categoryIds)
                               AND (:name IS NULL OR p.name ILIKE %:name%)
                     """
     )

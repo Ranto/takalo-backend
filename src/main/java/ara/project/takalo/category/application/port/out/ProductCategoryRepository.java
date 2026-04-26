@@ -1,9 +1,11 @@
-package ara.project.takalo.category.domain.repository;
+package ara.project.takalo.category.application.port.out;
 
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface ProductCategoryRepository {
@@ -16,4 +18,6 @@ public interface ProductCategoryRepository {
     PagedResponse<ProductCategory> findAll(int page, int size);
 
     void deleteById(UUID id);
+
+    Map<UUID, String> getCategoryLabels(Set<UUID> ids);
 }

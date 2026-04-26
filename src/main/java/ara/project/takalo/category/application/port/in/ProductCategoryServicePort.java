@@ -3,6 +3,8 @@ package ara.project.takalo.category.application.port.in;
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public interface ProductCategoryServicePort {
@@ -15,4 +17,6 @@ public interface ProductCategoryServicePort {
     ProductCategory getById(UUID id);
 
     PagedResponse<ProductCategory> search(String label, int page, int limit);
+
+    Map<UUID, String> getCategoryLabels(Set<UUID> ids);
 }

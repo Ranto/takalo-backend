@@ -1,4 +1,4 @@
-package ara.project.takalo.product.domain.repository;
+package ara.project.takalo.product.application.port.out;
 
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.product.domain.model.Product;

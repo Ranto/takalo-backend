@@ -1,9 +1,10 @@
 package ara.project.takalo.purchase.infrastructure.persistence;
 
 import ara.project.takalo.purchase.domain.model.Purchase;
-import ara.project.takalo.purchase.domain.repository.PurchaseRepository;
+import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.infrastructure.persistence.entities.PurchaseEntity;
 import ara.project.takalo.purchase.infrastructure.persistence.mappers.PurchaseMapper;
+import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.shared.infrastructure.utility.PaginationMapper;
 import lombok.RequiredArgsConstructor;
@@ -50,9 +51,10 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
 
     @Override
     public void deleteById(UUID purchaseId) {
-        if (purchaseRepository.existsById(purchaseId)) {
-            purchaseRepository.deleteById(purchaseId);
+        if (!purchaseRepository.existsById(purchaseId)) {
+            throw new ResourceNotFoundException("Achat non trouvé");
         }
+        purchaseRepository.deleteById(purchaseId);
     }
 
 }

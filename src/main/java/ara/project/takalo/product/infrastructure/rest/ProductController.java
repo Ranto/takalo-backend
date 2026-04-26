@@ -41,10 +41,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getById(@PathVariable UUID id) {
-        return productServicePort.getById(id)
-                .map(webMapper::toResponse)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(webMapper.toResponse(productServicePort.getById(id)));
     }
 
     @GetMapping
@@ -53,7 +50,7 @@ public class ProductController {
             @RequestParam(defaultValue = "10") int size) {
 
         var pagedDomain = productServicePort.findAll(page, size);
-        PagedResponse<ProductResponse> response = pagedDomain.map(webMapper::toResponse);
+        PagedResponse<ProductResponse> response = webMapper.toResponses(pagedDomain);
         return ResponseEntity.ok(response);
     }
 
@@ -65,16 +62,15 @@ public class ProductController {
             @RequestParam(defaultValue = "10") int size) {
 
         PagedResponse<Product> pagedDomain = productServicePort.searchByCategoriesOrName(categoryIds, name, page, size);
-        PagedResponse<ProductResponse> response = pagedDomain.map(webMapper::toResponse);
+        PagedResponse<ProductResponse> response = webMapper.toResponses(pagedDomain);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
-    public ProductResponse update(@PathVariable UUID id, @RequestBody ProductRequest request) {
+    public ProductResponse update(@PathVariable UUID id, @Valid @RequestBody ProductRequest request) {
         Product toUpdate = new Product(id,
                 request.name(),
                 request.categoryId(),
-                null,
                 null,
                 null);
         Product updated = productServicePort.update(id, toUpdate);

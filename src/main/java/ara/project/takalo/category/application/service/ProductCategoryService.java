@@ -2,13 +2,15 @@ package ara.project.takalo.category.application.service;
 
 import ara.project.takalo.category.application.port.in.ProductCategoryServicePort;
 import ara.project.takalo.category.domain.model.ProductCategory;
-import ara.project.takalo.category.domain.repository.ProductCategoryRepository;
+import ara.project.takalo.category.application.port.out.ProductCategoryRepository;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -50,5 +52,11 @@ public class ProductCategoryService implements ProductCategoryServicePort {
             return repository.findAll(page, limit);
         }
         return repository.findByLabel(label, page, limit);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Map<UUID, String> getCategoryLabels(Set<UUID> ids) {
+        return repository.getCategoryLabels(ids);
     }
 }

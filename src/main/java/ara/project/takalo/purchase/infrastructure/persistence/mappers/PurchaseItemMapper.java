@@ -10,7 +10,7 @@ public class PurchaseItemMapper {
     public PurchaseItem toDomain(PurchaseItemEntity entity) {
         if (entity == null) return null;
         return new PurchaseItem(
-                entity.getId(),
+                entity.getProductId(),
                 entity.getQuantity(),
                 entity.getUnitPrice(),
                 entity.getDiscount(),
@@ -29,6 +29,7 @@ public class PurchaseItemMapper {
                 .quantity(domain.quantity())
                 .unitPrice(domain.unitPrice())
                 .storeName(domain.storeName())
+                .productName(domain.productName())
                 .build();
     }
 }

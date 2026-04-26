@@ -1,15 +1,12 @@
 package ara.project.takalo.product.infrastructure.persistence.entities;
 
-import ara.project.takalo.category.infrastructure.persistence.entities.ProductCategoryEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
@@ -19,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -39,6 +37,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class ProductEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -47,9 +46,8 @@ public class ProductEntity {
     @Column(nullable = false)
     private String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private ProductCategoryEntity category;
+    @Column(name = "category_id")
+    private UUID categoryId;
 
     @CreatedDate
     @Column(updatable = false, nullable = false)
@@ -58,6 +56,4 @@ public class ProductEntity {
     @LastModifiedDate
     @Column(nullable = false)
     private Instant updatedAt;
-
-    private Instant deletedAt;
 }

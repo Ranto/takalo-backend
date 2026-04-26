@@ -2,21 +2,21 @@ package ara.project.takalo.product.application.service;
 
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.product.domain.model.Product;
-import ara.project.takalo.product.domain.repository.ProductRepository;
+import ara.project.takalo.product.application.port.out.ProductRepository;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class ProductService implements ProductServicePort {
 
@@ -41,9 +41,8 @@ public class ProductService implements ProductServicePort {
             Product toUpdate = new Product(id,
                     product.name(),
                     product.categoryId(),
-                    product.categoryLabel(),
-                    existing.createdAt(),
-                    Instant.now());
+                    null,
+                    null);
             return repository.save(toUpdate);
         }).orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
@@ -53,21 +52,26 @@ public class ProductService implements ProductServicePort {
         repository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     @Override
-    public Optional<Product> getById(UUID id) {
-        return repository.findById(id);
+    public Product getById(UUID id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
     @Override
     public PagedResponse<Product> searchByCategoriesOrName(List<UUID> categoryIds, String name, int page, int limit) {
         return repository.findByNameOrCategoryIds(name, categoryIds, page, limit);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public PagedResponse<Product> findAll(int page, int size) {
         return repository.findAll(page, size);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public Map<UUID, String> getProductNames(Set<UUID> ids) {
         return repository.getProductNames(ids);
