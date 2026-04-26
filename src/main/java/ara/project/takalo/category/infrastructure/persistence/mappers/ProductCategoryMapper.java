@@ -7,6 +7,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProductCategoryMapper {
     public ProductCategoryEntity toEntity(ProductCategory domain) {
+        if (domain == null) {
+            return null;
+        }
         return ProductCategoryEntity.builder()
                 .id(domain.id())
                 .label(domain.label())
@@ -15,6 +18,9 @@ public class ProductCategoryMapper {
     }
 
     public ProductCategory toDomain(ProductCategoryEntity entity) {
+        if (entity == null) {
+            return null;
+        }
         return new ProductCategory(entity.getId(), entity.getLabel(), entity.getDescription());
     }
 }
