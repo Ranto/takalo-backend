@@ -10,5 +10,7 @@ public record Product(
         Instant createdAt,
         Instant updatedAt
 ) {
-
+    public Product {
+        if (name != null) name = name.strip();
+    }
 }

@@ -13,7 +13,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -151,5 +153,30 @@ class ProductCategoryServiceTest {
 
         assertThat(result).isSameAs(page);
         verify(repository, never()).findAll(anyInt(), anyInt());
+    }
+
+    @Test
+    void getCategoryLabels_delegatesToRepository() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        Set<UUID> ids = Set.of(id1, id2);
+        Map<UUID, String> labels = Map.of(id1, "Books", id2, "Music");
+        when(repository.getCategoryLabels(ids)).thenReturn(labels);
+
+        Map<UUID, String> result = service.getCategoryLabels(ids);
+
+        assertThat(result).isSameAs(labels);
+        verify(repository).getCategoryLabels(ids);
+    }
+
+    @Test
+    void getCategoryLabels_whenEmptyIds_delegatesAndReturnsEmpty() {
+        Set<UUID> ids = Set.of();
+        when(repository.getCategoryLabels(ids)).thenReturn(Map.of());
+
+        Map<UUID, String> result = service.getCategoryLabels(ids);
+
+        assertThat(result).isEmpty();
+        verify(repository).getCategoryLabels(ids);
     }
 }

@@ -23,4 +23,6 @@ public interface ProductRepository {
     boolean existsByName(String name);
 
     Map<UUID, String> getProductNames(Set<UUID> productIds);
+
+    Optional<UUID> findIdByName(String name);
 }

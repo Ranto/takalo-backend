@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -75,5 +76,14 @@ public class ProductService implements ProductServicePort {
     @Override
     public Map<UUID, String> getProductNames(Set<UUID> ids) {
         return repository.getProductNames(ids);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Optional<UUID> findIdByName(String name) {
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
+        }
+        return repository.findIdByName(name.trim());
     }
 }

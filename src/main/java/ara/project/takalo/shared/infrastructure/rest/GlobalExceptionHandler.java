@@ -1,5 +1,6 @@
 package ara.project.takalo.shared.infrastructure.rest;
 
+import ara.project.takalo.purchase.domain.exception.UnsupportedImportFormatException;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
 import ara.project.takalo.shared.infrastructure.rest.dto.ErrorResponse;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
@@ -62,6 +63,17 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleAlreadyExists(AlreadyExistsException ex, HttpServletRequest request) {
         return new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                LocalDateTime.now(),
+                request.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(UnsupportedImportFormatException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleUnsupportedImportFormat(UnsupportedImportFormatException ex, HttpServletRequest request) {
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
                 ex.getMessage(),
                 LocalDateTime.now(),
                 request.getRequestURI()
