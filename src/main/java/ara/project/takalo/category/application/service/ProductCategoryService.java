@@ -3,6 +3,7 @@ package ara.project.takalo.category.application.service;
 import ara.project.takalo.category.application.port.in.ProductCategoryServicePort;
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.application.port.out.ProductCategoryRepository;
+import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,9 @@ public class ProductCategoryService implements ProductCategoryServicePort {
 
     @Override
     public ProductCategory create(ProductCategory category) {
+        if (repository.existsByLabel(category.label())) {
+            throw new AlreadyExistsException("Une catégorie avec ce nom existe déjà.");
+        }
         return repository.save(category);
     }
 

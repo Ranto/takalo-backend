@@ -143,4 +143,24 @@ class ProductCategoryPersistenceAdapterTest {
 
         verify(jpaRepository, never()).deleteById(any(UUID.class));
     }
+
+    @Test
+    void existsByLabel_whenLabelExists_returnsTrue() {
+        when(jpaRepository.existsByLabelIgnoreCase("Books")).thenReturn(true);
+
+        boolean result = adapter.existsByLabel("Books");
+
+        assertThat(result).isTrue();
+        verify(jpaRepository).existsByLabelIgnoreCase("Books");
+    }
+
+    @Test
+    void existsByLabel_whenLabelDoesNotExist_returnsFalse() {
+        when(jpaRepository.existsByLabelIgnoreCase("Unknown")).thenReturn(false);
+
+        boolean result = adapter.existsByLabel("Unknown");
+
+        assertThat(result).isFalse();
+        verify(jpaRepository).existsByLabelIgnoreCase("Unknown");
+    }
 }

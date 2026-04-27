@@ -20,4 +20,6 @@ public interface ProductCategoryRepository {
     void deleteById(UUID id);
 
     Map<UUID, String> getCategoryLabels(Set<UUID> ids);
+
+    boolean existsByLabel(String label);
 }
