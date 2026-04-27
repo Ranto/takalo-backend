@@ -8,12 +8,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 public interface JpaProductRepository extends JpaRepository<ProductEntity, UUID> {
 
     boolean existsByNameIgnoreCase(String name);
+
+    @Query("SELECT p.id FROM ProductEntity p WHERE LOWER(p.name) = LOWER(:name)")
+    Optional<UUID> findIdByName(@Param("name") String name);
 
     @Query(
             value = """

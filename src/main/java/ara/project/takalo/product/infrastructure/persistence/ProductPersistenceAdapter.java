@@ -67,6 +67,11 @@ public class ProductPersistenceAdapter implements ProductRepository {
     }
 
     @Override
+    public Optional<UUID> findIdByName(String name) {
+        return repository.findIdByName(name);
+    }
+
+    @Override
     public Map<UUID, String> getProductNames(Set<UUID> productIds) {
         if (productIds == null || productIds.isEmpty()) {
             return Map.of();
