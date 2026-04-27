@@ -6,6 +6,14 @@ import ara.project.takalo.product.infrastructure.rest.dto.ProductRequest;
 import ara.project.takalo.product.infrastructure.rest.dto.ProductResponse;
 import ara.project.takalo.product.infrastructure.rest.mapper.ProductWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.shared.infrastructure.rest.dto.ErrorResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,12 +35,21 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
+@Tag(name = "Produits", description = "Gestion des produits")
 public class ProductController {
 
     private final ProductServicePort productServicePort;
     private final ProductWebMapper webMapper;
 
     @PostMapping
+    @Operation(summary = "Créer un produit")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Produit créé"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Catégorie associée introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     public ResponseEntity<ProductResponse> create(@Valid @RequestBody ProductRequest request) {
         var domain = webMapper.toDomain(request);
         var savedProduct = productServicePort.create(domain);
@@ -40,14 +57,22 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponse> getById(@PathVariable UUID id) {
+    @Operation(summary = "Obtenir un produit par identifiant")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Produit trouvé"),
+            @ApiResponse(responseCode = "404", description = "Produit introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<ProductResponse> getById(
+            @Parameter(description = "Identifiant du produit") @PathVariable UUID id) {
         return ResponseEntity.ok(webMapper.toResponse(productServicePort.getById(id)));
     }
 
     @GetMapping
+    @Operation(summary = "Lister tous les produits", description = "Liste paginée de l'ensemble des produits.")
     public ResponseEntity<PagedResponse<ProductResponse>> findAll(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
 
         var pagedDomain = productServicePort.findAll(page, size);
         PagedResponse<ProductResponse> response = webMapper.toResponses(pagedDomain);
@@ -55,11 +80,13 @@ public class ProductController {
     }
 
     @GetMapping("/search")
+    @Operation(summary = "Rechercher des produits",
+            description = "Recherche paginée par nom partiel et/ou liste de catégories.")
     public ResponseEntity<PagedResponse<ProductResponse>> search(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) List<UUID> categoryIds,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @Parameter(description = "Filtre partiel sur le nom") @RequestParam(required = false) String name,
+            @Parameter(description = "Identifiants de catégories à inclure") @RequestParam(required = false) List<UUID> categoryIds,
+            @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
 
         PagedResponse<Product> pagedDomain = productServicePort.searchByCategoriesOrName(categoryIds, name, page, size);
         PagedResponse<ProductResponse> response = webMapper.toResponses(pagedDomain);
@@ -67,7 +94,17 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ProductResponse update(@PathVariable UUID id, @Valid @RequestBody ProductRequest request) {
+    @Operation(summary = "Mettre à jour un produit")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Produit mis à jour"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Produit ou catégorie introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ProductResponse update(
+            @Parameter(description = "Identifiant du produit") @PathVariable UUID id,
+            @Valid @RequestBody ProductRequest request) {
         Product toUpdate = new Product(id,
                 request.name(),
                 request.categoryId(),
@@ -79,7 +116,13 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable UUID id) {
+    @Operation(summary = "Supprimer un produit")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Produit supprimé"),
+            @ApiResponse(responseCode = "404", description = "Produit introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public void delete(@Parameter(description = "Identifiant du produit") @PathVariable UUID id) {
         productServicePort.delete(id);
     }
 }

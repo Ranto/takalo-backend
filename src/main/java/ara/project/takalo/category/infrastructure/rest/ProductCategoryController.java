@@ -6,6 +6,14 @@ import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryReques
 import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryResponse;
 import ara.project.takalo.category.infrastructure.rest.mapper.ProductCategoryWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.shared.infrastructure.rest.dto.ErrorResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,38 +33,75 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/categories")
 @RequiredArgsConstructor
+@Tag(name = "Catégories", description = "Gestion des catégories de produits")
 public class ProductCategoryController {
     private final ProductCategoryServicePort service;
     private final ProductCategoryWebMapper webMapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Créer une catégorie", description = "Crée une nouvelle catégorie de produit.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Catégorie créée"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Une catégorie avec ce libellé existe déjà",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     public ProductCategoryResponse create(@Valid @RequestBody ProductCategoryRequest request) {
         ProductCategory saved = service.create(webMapper.toDomain(request));
         return webMapper.toResponse(saved);
     }
 
     @GetMapping("/{id}")
-    public ProductCategoryResponse getById(@PathVariable UUID id) {
+    @Operation(summary = "Obtenir une catégorie par identifiant")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Catégorie trouvée"),
+            @ApiResponse(responseCode = "404", description = "Catégorie introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ProductCategoryResponse getById(
+            @Parameter(description = "Identifiant de la catégorie") @PathVariable UUID id) {
         return webMapper.toResponse(service.getById(id));
     }
 
     @GetMapping
-    public PagedResponse<ProductCategoryResponse> search(@RequestParam(required = false) String label,
-                                                         @RequestParam(defaultValue = "0") int page,
-                                                         @RequestParam(defaultValue = "10") int size) {
+    @Operation(summary = "Rechercher des catégories",
+            description = "Recherche paginée des catégories par libellé (filtre optionnel).")
+    public PagedResponse<ProductCategoryResponse> search(
+            @Parameter(description = "Filtre partiel sur le libellé") @RequestParam(required = false) String label,
+            @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
         return service.search(label, page, size).map(webMapper::toResponse);
     }
 
     @PutMapping("/{id}")
-    public ProductCategoryResponse update(@PathVariable UUID id, @Valid @RequestBody ProductCategoryRequest request) {
+    @Operation(summary = "Mettre à jour une catégorie")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Catégorie mise à jour"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Catégorie introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Une catégorie avec ce libellé existe déjà",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ProductCategoryResponse update(
+            @Parameter(description = "Identifiant de la catégorie") @PathVariable UUID id,
+            @Valid @RequestBody ProductCategoryRequest request) {
         ProductCategory updated = service.update(id, webMapper.toDomain(id, request));
         return webMapper.toResponse(updated);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable UUID id) {
+    @Operation(summary = "Supprimer une catégorie")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Catégorie supprimée"),
+            @ApiResponse(responseCode = "404", description = "Catégorie introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public void delete(@Parameter(description = "Identifiant de la catégorie") @PathVariable UUID id) {
         service.delete(id);
     }
 }
