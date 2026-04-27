@@ -2,6 +2,7 @@ package ara.project.takalo.category.application.service;
 
 import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.application.port.out.ProductCategoryRepository;
+import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,18 @@ class ProductCategoryServiceTest {
         ProductCategory result = service.create(toSave);
 
         assertThat(result).isSameAs(saved);
+    }
+
+    @Test
+    void create_whenLabelTaken_throwsAlreadyExists() {
+        ProductCategory toSave = new ProductCategory(null, "Category", "");
+        when(repository.existsByLabel("Category")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(toSave))
+                .isInstanceOf(AlreadyExistsException.class)
+                .hasMessageContaining("existe déjà");
+
+        verify(repository, never()).save(any());
     }
 
     @Test

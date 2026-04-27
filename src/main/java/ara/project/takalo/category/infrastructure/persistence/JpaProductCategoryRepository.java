@@ -14,6 +14,8 @@ import java.util.UUID;
 public interface JpaProductCategoryRepository extends JpaRepository<ProductCategoryEntity, UUID> {
     Page<ProductCategoryEntity> findByLabelContainingIgnoreCase(String label, Pageable pageable);
 
+    boolean existsByLabelIgnoreCase(String label);
+
     interface CategoryIdAndLabel {
         UUID getId();
         String getLabel();

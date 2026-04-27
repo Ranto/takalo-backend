@@ -68,4 +68,9 @@ public class ProductCategoryPersistenceAdapter implements ProductCategoryReposit
                         JpaProductCategoryRepository.CategoryIdAndLabel::getLabel
                 ));
     }
+
+    @Override
+    public boolean existsByLabel(String label) {
+        return repository.existsByLabelIgnoreCase(label);
+    }
 }
