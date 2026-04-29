@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PurchaseController.class)
-@Import({PurchaseWebMapper.class, PurchaseItemWebMapper.class, PurchaseLightWebMapper.class, PurchaseImportWebMapper.class})
+@Import({PurchaseWebMapper.class, PurchaseItemWebMapper.class, PurchaseLightWebMapper.class,
+        PurchaseImportWebMapper.class})
 class PurchaseControllerTest {
 
     @Autowired
@@ -203,6 +205,49 @@ class PurchaseControllerTest {
 
         verify(service).search(null, null, 0, 10);
     }
+
+    // ------------------------------------------------------------------
+    // Budget par défaut à la création d'achat (S64, S65, S66)
+    // ------------------------------------------------------------------
+
+    private static String requestWithBudgetField(UUID productId, String budgetIdLiteral) {
+        // budgetIdLiteral peut être "null", "\"<uuid>\"" ou être omis (champ absent).
+        String field = budgetIdLiteral == null ? "" : ("\"budgetId\": " + budgetIdLiteral + ",\n");
+        return """
+                {
+                  %s"purchaseDate": "2026-04-10T12:00:00Z",
+                  "items": [
+                    { "productId": "%s", "unitPrice": 75.00, "quantity": 1.0, "discount": 0 }
+                  ]
+                }
+                """.formatted(field, productId);
+    }
+
+    @Test
+    void create_noBudgetField_usesDefaultBudget() throws Exception {
+        UUID alice = UUID.randomUUID();
+        UUID defaultBudget = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(defaultBudgetService.resolveDefaultBudgetIdFor(alice))
+                .thenReturn(Optional.of(defaultBudget));
+        when(service.create(any(Purchase.class)))
+                .thenAnswer(inv -> inv.getArgument(0, Purchase.class));
+
+        mockMvc.perform(post("/api/v1/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestWithBudgetField(productId, null)))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<Purchase> captor = ArgumentCaptor.forClass(Purchase.class);
+        verify(service).create(captor.capture());
+        assertThat(captor.getValue().budgetId()).isEqualTo(defaultBudget);
+    }
+
+    // S65 et S66 (champ "budgetId" explicite avec valeur ou null) requièrent le module
+    // JsonNullable correctement enregistré sur l'ObjectMapper du slice WebMvc, ce que
+    // @WebMvcTest ne fournit pas pour le moment. À couvrir par un test d'intégration
+    // (@SpringBootTest) dans un lot ultérieur.
 
     @Test
     void search_withParams_passesThemAndMapsLightResponse() throws Exception {
