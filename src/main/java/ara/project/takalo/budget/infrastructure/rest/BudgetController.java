@@ -12,6 +12,7 @@ import ara.project.takalo.budget.infrastructure.rest.dto.BudgetLightResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetMovementResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTimelineResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTransferRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTransferResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetUpdateRequest;
@@ -28,6 +29,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,6 +45,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -192,6 +195,31 @@ public class BudgetController {
         return service.findMovements(id, type).stream()
                 .map(mapper::toMovementResponse)
                 .toList();
+    }
+
+    @GetMapping("/{id}/timeline")
+    @PreAuthorize("hasAuthority('PERM_budget:read')")
+    @Operation(summary = "Consulter la timeline d'un budget",
+            description = "Renvoie la suite chronologique des évènements affectant le reste du budget "
+                    + "(création, crédits externes, transferts, achats, assignations/désassignations) "
+                    + "avec le reste cumulé après chaque évènement. L'évènement CREATION est synthétique "
+                    + "et n'apparaît pas dans GET /movements. Filtrable par fenêtre [start, end] (inclusif).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Timeline trouvée"),
+            @ApiResponse(responseCode = "400", description = "Fenêtre invalide (start > end)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Budget introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public BudgetTimelineResponse timeline(
+            @Parameter(description = "Identifiant du budget") @PathVariable UUID id,
+            @Parameter(description = "Borne basse ISO-8601 inclusive (optionnel)")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant start,
+            @Parameter(description = "Borne haute ISO-8601 inclusive (optionnel)")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant end) {
+        return mapper.toTimelineResponse(service.findTimeline(id, start, end));
     }
 
     @PostMapping("/{id}/editors")

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -119,6 +120,18 @@ public class PurchaseService implements PurchaseServicePort {
             budgetService.recordPurchaseAssignment(newBudgetId, purchaseId, amount, date, raison, correlationId);
         }
         return updated;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Purchase> findByBudgetId(UUID budgetId) {
+        return repository.findByBudgetId(budgetId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Purchase> findByIds(Collection<UUID> ids) {
+        return repository.findByIds(ids);
     }
 
     private void requireBudgetEditor(UUID budgetId) {

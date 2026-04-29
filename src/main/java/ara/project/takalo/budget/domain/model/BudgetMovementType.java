@@ -5,5 +5,9 @@ public enum BudgetMovementType {
     DESASSIGNATION_ACHAT,
     CREDIT_EXTERNE,
     TRANSFERT_ENTRANT,
-    TRANSFERT_SORTANT
+    TRANSFERT_SORTANT,
+    /** Projection-only : fond initial à la création, jamais persisté. */
+    CREATION,
+    /** Projection-only : achat initialement associé à un budget (pas de mouvement persisté). */
+    ACHAT
 }

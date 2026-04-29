@@ -9,9 +9,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUID> {
+
+    @EntityGraph(attributePaths = "items")
+    List<PurchaseEntity> findByBudgetId(UUID budgetId);
+
+    @EntityGraph(attributePaths = "items")
+    List<PurchaseEntity> findByIdIn(Collection<UUID> ids);
+
 
     @Query(
             value = """

@@ -6,6 +6,8 @@ import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.budget.domain.model.BudgetEditor;
 import ara.project.takalo.budget.domain.model.BudgetMovement;
+import ara.project.takalo.budget.domain.model.BudgetTimeline;
+import ara.project.takalo.budget.domain.model.BudgetTimelineEvent;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetCreditRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetEditorResponse;
@@ -13,6 +15,8 @@ import ara.project.takalo.budget.infrastructure.rest.dto.BudgetLightResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetMovementResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTimelineEventResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTimelineResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTransferRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetUpdateRequest;
 import org.springframework.stereotype.Component;
@@ -102,6 +106,28 @@ public class BudgetWebMapper {
                 m.correlationId(),
                 m.source(),
                 m.counterpartBudgetId()
+        );
+    }
+
+    public BudgetTimelineResponse toTimelineResponse(BudgetTimeline timeline) {
+        return new BudgetTimelineResponse(
+                timeline.events().stream().map(this::toTimelineEventResponse).toList(),
+                scale(timeline.restRefStart()),
+                scale(timeline.restRefEnd())
+        );
+    }
+
+    public BudgetTimelineEventResponse toTimelineEventResponse(BudgetTimelineEvent e) {
+        return new BudgetTimelineEventResponse(
+                e.date(),
+                e.type(),
+                scale(e.amount()),
+                scale(e.remainingBalance()),
+                e.reason(),
+                e.correlationId(),
+                e.purchaseId(),
+                e.source(),
+                e.counterpartBudgetId()
         );
     }
 

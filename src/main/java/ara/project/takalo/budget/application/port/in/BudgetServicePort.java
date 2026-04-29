@@ -4,6 +4,7 @@ import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.budget.domain.model.BudgetEditor;
 import ara.project.takalo.budget.domain.model.BudgetMovement;
 import ara.project.takalo.budget.domain.model.BudgetMovementType;
+import ara.project.takalo.budget.domain.model.BudgetTimeline;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 
@@ -77,4 +78,13 @@ public interface BudgetServicePort {
      * Lecture ouverte à tout utilisateur authentifié porteur de {@code budget:read} (S55).
      */
     List<BudgetEditor> listEditors(UUID budgetId);
+
+    /**
+     * Timeline chronologique d'un budget : suite d'évènements affectant son reste,
+     * avec le reste cumulé après chaque évènement (S56–S61). Si {@code start} et/ou
+     * {@code end} sont fournis, la liste est filtrée et {@code restRefStart} /
+     * {@code restRefEnd} sont calculés comme reste cumulé aux bornes (utile pour tracer
+     * une courbe). Lecture ouverte à tout authentifié porteur de {@code budget:read} (S61).
+     */
+    BudgetTimeline findTimeline(UUID budgetId, Instant start, Instant end);
 }
