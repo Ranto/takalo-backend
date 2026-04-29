@@ -585,4 +585,52 @@ class BudgetServiceTest {
         verify(repository, never()).save(any());
         verify(movementRepository, never()).save(any());
     }
+
+    // ------------------------------------------------------------------
+    // Mise à jour des méta-données (S13 / S14)
+    // ------------------------------------------------------------------
+
+    @Test
+    void update_rejectsFondChange_throws400() {
+        UUID id = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.update(id,
+                new ara.project.takalo.budget.application.port.in.BudgetUpdateCommand(
+                        "Courses", "desc", Optional.of(new BigDecimal("800.00")))))
+                .isInstanceOf(InvalidOperationException.class)
+                .hasMessage("Le fond initial d'un budget ne peut pas être modifié, utiliser un crédit");
+
+        // S13 : aucun lookup ni save : le contrôle se fait avant tout accès repo.
+        verify(repository, never()).findById(any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void update_changesNameAndDescription_keepsFond() {
+        UUID id = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        Instant createdAt = Instant.parse("2026-04-01T08:00:00Z");
+        Budget existing = new Budget(id, "Courses", "desc",
+                new BigDecimal("500.00"), alice, Set.of(alice), createdAt, null);
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(repository.existsByName("Alimentation")).thenReturn(false);
+        when(repository.save(any(Budget.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.totalPurchasesByBudgetIds(List.of(id)))
+                .thenReturn(Map.of(id, new BigDecimal("200.00")));
+
+        BudgetWithBalance result = service.update(id,
+                new ara.project.takalo.budget.application.port.in.BudgetUpdateCommand(
+                        "Alimentation", "Courses hebdomadaires + extra", Optional.empty()));
+
+        ArgumentCaptor<Budget> captor = ArgumentCaptor.forClass(Budget.class);
+        verify(repository).save(captor.capture());
+        Budget saved = captor.getValue();
+        assertThat(saved.name()).isEqualTo("Alimentation");
+        assertThat(saved.description()).isEqualTo("Courses hebdomadaires + extra");
+        assertThat(saved.initialFund()).isEqualByComparingTo("500.00");
+        assertThat(saved.createdBy()).isEqualTo(alice);
+        assertThat(saved.createdAt()).isEqualTo(createdAt);
+        assertThat(result.totalPurchases()).isEqualByComparingTo("200.00");
+    }
 }
