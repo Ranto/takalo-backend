@@ -42,10 +42,10 @@ class PurchasePersistenceAdapterTest {
 
     @Test
     void save_mapsToEntityPersistsAndMapsBack() {
-        Purchase domain = new Purchase(null, null, Instant.now(), List.of());
+        Purchase domain = new Purchase(null, null, null, Instant.now(), List.of());
         PurchaseEntity toPersist = PurchaseEntity.builder().build();
         PurchaseEntity persisted = PurchaseEntity.builder().id(UUID.randomUUID()).build();
-        Purchase mappedBack = new Purchase(persisted.getId(), null, domain.purchaseDate(), List.of());
+        Purchase mappedBack = new Purchase(persisted.getId(), null, null, domain.purchaseDate(), List.of());
 
         when(purchaseMapper.toEntity(domain)).thenReturn(toPersist);
         when(jpaRepository.save(toPersist)).thenReturn(persisted);
@@ -60,7 +60,7 @@ class PurchasePersistenceAdapterTest {
     void findById_whenPresent_returnsMappedDomain() {
         UUID id = UUID.randomUUID();
         PurchaseEntity entity = PurchaseEntity.builder().id(id).build();
-        Purchase domain = new Purchase(id, null, Instant.now(), List.of());
+        Purchase domain = new Purchase(id, null, null, Instant.now(), List.of());
 
         when(jpaRepository.findById(id)).thenReturn(Optional.of(entity));
         when(purchaseMapper.toDomain(entity)).thenReturn(domain);
@@ -82,7 +82,7 @@ class PurchasePersistenceAdapterTest {
     void findAll_passesPageableAndConverts() {
         UUID id = UUID.randomUUID();
         PurchaseEntity entity = PurchaseEntity.builder().id(id).build();
-        Purchase domain = new Purchase(id, null, Instant.now(), List.of());
+        Purchase domain = new Purchase(id, null, null, Instant.now(), List.of());
         PageRequest expected = PageRequest.of(0, 10);
         PageImpl<PurchaseEntity> page = new PageImpl<>(List.of(entity), expected, 1);
 
@@ -105,7 +105,7 @@ class PurchasePersistenceAdapterTest {
         Instant end = Instant.parse("2024-12-31T23:59:59Z");
         UUID id = UUID.randomUUID();
         PurchaseEntity entity = PurchaseEntity.builder().id(id).build();
-        Purchase domain = new Purchase(id, null, Instant.now(), List.of());
+        Purchase domain = new Purchase(id, null, null, Instant.now(), List.of());
         PageRequest expected = PageRequest.of(1, 5);
         PageImpl<PurchaseEntity> page = new PageImpl<>(List.of(entity), expected, 1);
 

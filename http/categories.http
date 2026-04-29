@@ -1,0 +1,114 @@
+### Récupérer un access token Keycloak (password grant)
+POST http://localhost:8081/realms/takalo/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type = password &
+client_id = takalo-backend &
+username = admin &
+password = adminadmin
+
+> {%
+    client.global.set("access_token", response.body.access_token);
+    client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Créer une catégorie (cas nominal)
+POST http://localhost:8080/api/v1/categories
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "Produits laitiers",
+  "description": "Lait, yaourts, fromages"
+}
+
+> {%
+    client.global.set("category_id", response.body.id);
+%}
+
+### Créer une catégorie — libellé vide (400)
+POST http://localhost:8080/api/v1/categories
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "   ",
+  "description": "Invalide"
+}
+
+### Créer une catégorie — libellé trop court (400)
+POST http://localhost:8080/api/v1/categories
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "A"
+}
+
+### Créer une catégorie — libellé déjà pris (409)
+POST http://localhost:8080/api/v1/categories
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "Produits laitiers"
+}
+
+### Obtenir une catégorie par id
+GET http://localhost:8080/api/v1/categories/{{category_id}}
+Authorization: Bearer {{access_token}}
+
+### Obtenir une catégorie — id inconnu (404)
+GET http://localhost:8080/api/v1/categories/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+
+### Rechercher des catégories (sans filtre, page par défaut)
+GET http://localhost:8080/api/v1/categories
+Authorization: Bearer {{access_token}}
+
+### Rechercher des catégories — filtre libellé partiel
+GET http://localhost:8080/api/v1/categories?label=lait
+Authorization: Bearer {{access_token}}
+
+### Rechercher des catégories — pagination personnalisée
+GET http://localhost:8080/api/v1/categories?label=lait&page=0&size=5
+Authorization: Bearer {{access_token}}
+
+### Mettre à jour une catégorie
+PUT http://localhost:8080/api/v1/categories/{{category_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "Produits laitiers et œufs",
+  "description": "Mise à jour"
+}
+
+### Mettre à jour une catégorie — libellé vide (400)
+PUT http://localhost:8080/api/v1/categories/{{category_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "  "
+}
+
+### Mettre à jour une catégorie — id inconnu (404)
+PUT http://localhost:8080/api/v1/categories/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "Inconnue"
+}
+
+### Supprimer une catégorie
+DELETE http://localhost:8080/api/v1/categories/{{category_id}}
+Authorization: Bearer {{access_token}}
+
+### Supprimer une catégorie — id inconnu (404)
+DELETE http://localhost:8080/api/v1/categories/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+
+### Sans authentification (401)
+GET http://localhost:8080/api/v1/categories

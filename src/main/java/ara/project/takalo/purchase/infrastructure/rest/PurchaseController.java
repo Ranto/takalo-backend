@@ -2,6 +2,9 @@ package ara.project.takalo.purchase.infrastructure.rest;
 
 import ara.project.takalo.purchase.application.port.in.PurchaseImportServicePort;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
+import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
+import ara.project.takalo.user.application.port.in.UserDefaultBudgetServicePort;
+import org.openapitools.jackson.nullable.JsonNullable;
 import ara.project.takalo.purchase.domain.exception.UnsupportedImportFormatException;
 import ara.project.takalo.purchase.domain.model.ImportFormat;
 import ara.project.takalo.purchase.domain.model.Purchase;
@@ -10,6 +13,7 @@ import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseImportRespons
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseLightResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseRequest;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseResponse;
+import ara.project.takalo.purchase.infrastructure.rest.dto.ReassignPurchaseBudgetRequest;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseImportWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseLightWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseWebMapper;
@@ -31,6 +35,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -59,6 +64,8 @@ public class PurchaseController {
     private final PurchaseWebMapper purchaseWebMapper;
     private final PurchaseLightWebMapper purchaseLightWebMapper;
     private final PurchaseImportWebMapper purchaseImportWebMapper;
+    private final UserDefaultBudgetServicePort defaultBudgetService;
+    private final CurrentUserProvider currentUserProvider;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -72,7 +79,16 @@ public class PurchaseController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public PurchaseResponse create(@Valid @RequestBody PurchaseRequest request) {
-        Purchase purchase = purchaseWebMapper.toDomain(request);
+        UUID effectiveBudgetId;
+        JsonNullable<UUID> requested = request.budgetId();
+        if (requested == null || !requested.isPresent()) {
+            effectiveBudgetId = defaultBudgetService
+                    .resolveDefaultBudgetIdFor(currentUserProvider.id())
+                    .orElse(null);
+        } else {
+            effectiveBudgetId = requested.get();
+        }
+        Purchase purchase = purchaseWebMapper.toDomain(request, effectiveBudgetId);
         Purchase saved = service.create(purchase);
         return purchaseWebMapper.toResponse(saved);
     }
@@ -130,6 +146,26 @@ public class PurchaseController {
             @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
         PagedResponse<Purchase> result = service.search(start, end, page, size);
         return result.map(purchaseLightWebMapper::toResponse);
+    }
+
+    @PatchMapping("/{id}/budget")
+    @PreAuthorize("hasAuthority('PERM_purchase:write')")
+    @Operation(summary = "Réassigner un achat à un autre budget",
+            description = "L'auteur de l'achat doit être éditeur de l'ancien et du nouveau budget.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Achat réassigné"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Accès refusé (non éditeur ou non auteur)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Achat ou budget introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<PurchaseResponse> reassignBudget(
+            @Parameter(description = "Identifiant de l'achat") @PathVariable UUID id,
+            @Valid @RequestBody ReassignPurchaseBudgetRequest request) {
+        Purchase updated = service.reassignBudget(id, request.budgetId(), request.date(), request.raison());
+        return ResponseEntity.ok(purchaseWebMapper.toResponse(updated));
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

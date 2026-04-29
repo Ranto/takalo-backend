@@ -1,9 +1,12 @@
 package ara.project.takalo.purchase.application.service;
 
+import ara.project.takalo.budget.application.port.in.BudgetServicePort;
+import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItem;
+import ara.project.takalo.shared.domain.exception.ForbiddenException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
@@ -40,6 +43,9 @@ class PurchaseServiceTest {
     private ProductServicePort productService;
 
     @Mock
+    private BudgetServicePort budgetService;
+
+    @Mock
     private CurrentUserProvider currentUserProvider;
 
     @InjectMocks
@@ -52,8 +58,8 @@ class PurchaseServiceTest {
         UUID productId2 = UUID.randomUUID();
         PurchaseItem item1 = new PurchaseItem(productId1, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
         PurchaseItem item2 = new PurchaseItem(productId2, 2.0, new BigDecimal("4.00"), BigDecimal.ZERO, null, null, null);
-        Purchase input = new Purchase(null, null, Instant.parse("2024-01-01T00:00:00Z"), List.of(item1, item2));
-        Purchase saved = new Purchase(UUID.randomUUID(), currentUser, input.purchaseDate(), List.of());
+        Purchase input = new Purchase(null, null, null, Instant.parse("2024-01-01T00:00:00Z"), List.of(item1, item2));
+        Purchase saved = new Purchase(UUID.randomUUID(), currentUser, null, input.purchaseDate(), List.of());
 
         when(currentUserProvider.id()).thenReturn(currentUser);
         when(productService.getProductNames(Set.of(productId1, productId2)))
@@ -77,7 +83,7 @@ class PurchaseServiceTest {
     void create_whenProductNameMissing_usesFallback() {
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
-        Purchase input = new Purchase(null, null, Instant.now(), List.of(item));
+        Purchase input = new Purchase(null, null, null, Instant.now(), List.of(item));
 
         when(currentUserProvider.id()).thenReturn(UUID.randomUUID());
         when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of());
@@ -94,9 +100,9 @@ class PurchaseServiceTest {
         UUID owner = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
-        Purchase existing = new Purchase(id, owner, Instant.parse("2024-01-01T00:00:00Z"), List.of());
-        Purchase body = new Purchase(null, null, Instant.parse("2024-02-01T00:00:00Z"), List.of(item));
-        Purchase saved = new Purchase(id, owner, body.purchaseDate(), List.of());
+        Purchase existing = new Purchase(id, owner, null, Instant.parse("2024-01-01T00:00:00Z"), List.of());
+        Purchase body = new Purchase(null, null, null, Instant.parse("2024-02-01T00:00:00Z"), List.of(item));
+        Purchase saved = new Purchase(id, owner, null, body.purchaseDate(), List.of());
 
         when(repository.findById(id)).thenReturn(Optional.of(existing));
         when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of(productId, "Lait"));
@@ -114,7 +120,7 @@ class PurchaseServiceTest {
     @Test
     void update_whenNotFound_throwsResourceNotFound() {
         UUID id = UUID.randomUUID();
-        Purchase body = new Purchase(null, null, Instant.now(), List.of());
+        Purchase body = new Purchase(null, null, null, Instant.now(), List.of());
 
         when(repository.findById(id)).thenReturn(Optional.empty());
 
@@ -126,8 +132,12 @@ class PurchaseServiceTest {
     }
 
     @Test
-    void delete_delegatesToRepository() {
+    void delete_whenOwner_delegatesToRepository() {
         UUID id = UUID.randomUUID();
+        UUID owner = UUID.randomUUID();
+        Purchase existing = new Purchase(id, owner, null, Instant.now(), List.of());
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        when(currentUserProvider.id()).thenReturn(owner);
 
         service.delete(id);
 
@@ -138,7 +148,7 @@ class PurchaseServiceTest {
     void getById_whenOwnerWithReadOwn_returnsDomain() {
         UUID id = UUID.randomUUID();
         UUID currentUser = UUID.randomUUID();
-        Purchase found = new Purchase(id, currentUser, Instant.now(), List.of());
+        Purchase found = new Purchase(id, currentUser, null, Instant.now(), List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(false);
         when(currentUserProvider.id()).thenReturn(currentUser);
@@ -153,7 +163,7 @@ class PurchaseServiceTest {
         UUID id = UUID.randomUUID();
         UUID owner = UUID.randomUUID();
         UUID other = UUID.randomUUID();
-        Purchase found = new Purchase(id, owner, Instant.now(), List.of());
+        Purchase found = new Purchase(id, owner, null, Instant.now(), List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(false);
         when(currentUserProvider.id()).thenReturn(other);
@@ -165,7 +175,7 @@ class PurchaseServiceTest {
     @Test
     void getById_whenReadAny_returnsRegardlessOfOwner() {
         UUID id = UUID.randomUUID();
-        Purchase found = new Purchase(id, UUID.randomUUID(), Instant.now(), List.of());
+        Purchase found = new Purchase(id, UUID.randomUUID(), null, Instant.now(), List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(true);
 
@@ -182,6 +192,159 @@ class PurchaseServiceTest {
         assertThatThrownBy(() -> service.getById(id))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Achat non trouvé");
+    }
+
+    // ------------------------------------------------------------------
+    // Association achat ↔ budget (S15, S16, S17, S18, S20)
+    // ------------------------------------------------------------------
+
+    private Budget budgetWithEditors(UUID id, UUID... editors) {
+        return new Budget(id, "B", null, BigDecimal.ZERO,
+                editors[0], Set.of(editors), java.time.Instant.now(), null);
+    }
+
+    @Test
+    void create_withBudget_byEditor_savesWithBudgetIdAndOwner() {
+        UUID alice = UUID.randomUUID();
+        UUID budgetId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("75.00"),
+                BigDecimal.ZERO, null, null, null);
+        Purchase input = new Purchase(null, null, budgetId,
+                Instant.parse("2026-04-10T12:00:00Z"), List.of(item));
+
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(budgetService.getRawById(budgetId)).thenReturn(budgetWithEditors(budgetId, alice));
+        when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of(productId, "Pain"));
+        when(repository.save(any(Purchase.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Purchase result = service.create(input);
+
+        ArgumentCaptor<Purchase> captor = ArgumentCaptor.forClass(Purchase.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().ownerId()).isEqualTo(alice);
+        assertThat(captor.getValue().budgetId()).isEqualTo(budgetId);
+        assertThat(result.budgetId()).isEqualTo(budgetId);
+    }
+
+    @Test
+    void create_withBudget_byNonEditor_throws403() {
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        UUID budgetId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("50.00"),
+                BigDecimal.ZERO, null, null, null);
+        Purchase input = new Purchase(null, null, budgetId, Instant.now(), List.of(item));
+
+        when(currentUserProvider.id()).thenReturn(alice);
+        // Le budget est créé par bob, alice n'est pas dans la liste des éditeurs.
+        when(budgetService.getRawById(budgetId)).thenReturn(budgetWithEditors(budgetId, bob));
+
+        assertThatThrownBy(() -> service.create(input))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("éditeur");
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void create_withUnknownBudget_throws404() {
+        UUID alice = UUID.randomUUID();
+        UUID budgetId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("50.00"),
+                BigDecimal.ZERO, null, null, null);
+        Purchase input = new Purchase(null, null, budgetId, Instant.now(), List.of(item));
+
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(budgetService.getRawById(budgetId))
+                .thenThrow(new ResourceNotFoundException("Budget non trouvé"));
+
+        assertThatThrownBy(() -> service.create(input))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void create_withoutBudget_skipsEditorCheck() {
+        UUID alice = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("30.00"),
+                BigDecimal.ZERO, null, null, null);
+        Purchase input = new Purchase(null, null, null, Instant.now(), List.of(item));
+
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of(productId, "x"));
+        when(repository.save(any(Purchase.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.create(input);
+
+        verify(budgetService, never()).getRawById(any());
+    }
+
+    @Test
+    void delete_purchaseLinkedToBudget_deletesWithoutTouchingBudget() {
+        UUID id = UUID.randomUUID();
+        UUID owner = UUID.randomUUID();
+        UUID budgetId = UUID.randomUUID();
+        Purchase existing = new Purchase(id, owner, budgetId, Instant.now(), List.of());
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        when(currentUserProvider.id()).thenReturn(owner);
+
+        service.delete(id);
+
+        // S20 : la suppression ne touche pas au budget ; le reste est libéré du seul fait
+        // que l'achat n'apparaît plus dans totalPurchasesByBudgetIds.
+        verify(repository).deleteById(id);
+        verify(budgetService, never()).recordPurchaseUnassignment(any(), any(), any(), any(), any(), any());
+    }
+
+    // ------------------------------------------------------------------
+    // Réassignation d'achat (S19)
+    // ------------------------------------------------------------------
+
+    @Test
+    void reassignBudget_betweenTwoBudgets_logsMirrorMovementsWithSameCorrelationId() {
+        UUID alice = UUID.randomUUID();
+        UUID purchaseId = UUID.randomUUID();
+        UUID courses = UUID.randomUUID();
+        UUID loisirs = UUID.randomUUID();
+        PurchaseItem item = new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("80.00"),
+                BigDecimal.ZERO, null, null, "p");
+        Purchase existing = new Purchase(purchaseId, alice, courses,
+                Instant.parse("2026-04-10T12:00:00Z"), List.of(item));
+        Instant when = Instant.parse("2026-04-29T10:00:00Z");
+
+        when(repository.findById(purchaseId)).thenReturn(Optional.of(existing));
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(budgetService.getRawById(courses)).thenReturn(budgetWithEditors(courses, alice));
+        when(budgetService.getRawById(loisirs)).thenReturn(budgetWithEditors(loisirs, alice));
+        when(repository.save(any(Purchase.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Purchase result = service.reassignBudget(purchaseId, loisirs, when, "Mauvaise affectation");
+
+        assertThat(result.budgetId()).isEqualTo(loisirs);
+
+        ArgumentCaptor<UUID> corrUnassign = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<UUID> corrAssign = ArgumentCaptor.forClass(UUID.class);
+        verify(budgetService).recordPurchaseUnassignment(
+                org.mockito.ArgumentMatchers.eq(courses),
+                org.mockito.ArgumentMatchers.eq(purchaseId),
+                org.mockito.ArgumentMatchers.eq(new BigDecimal("80.000")),
+                org.mockito.ArgumentMatchers.eq(when),
+                org.mockito.ArgumentMatchers.eq("Mauvaise affectation"),
+                corrUnassign.capture());
+        verify(budgetService).recordPurchaseAssignment(
+                org.mockito.ArgumentMatchers.eq(loisirs),
+                org.mockito.ArgumentMatchers.eq(purchaseId),
+                org.mockito.ArgumentMatchers.eq(new BigDecimal("80.000")),
+                org.mockito.ArgumentMatchers.eq(when),
+                org.mockito.ArgumentMatchers.eq("Mauvaise affectation"),
+                corrAssign.capture());
+        // Les deux mouvements partagent le même correlationId.
+        assertThat(corrUnassign.getValue()).isEqualTo(corrAssign.getValue());
     }
 
     @Test

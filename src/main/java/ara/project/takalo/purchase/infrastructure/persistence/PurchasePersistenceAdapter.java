@@ -13,6 +13,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -55,6 +57,23 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
         var entityPage = purchaseRepository.findByDateRangeAndOwner(start, end, ownerId, pageable);
 
         return PaginationMapper.toPagedResponse(entityPage, purchaseMapper::toDomain);
+    }
+
+    @Override
+    public List<Purchase> findByBudgetId(UUID budgetId) {
+        return purchaseRepository.findByBudgetId(budgetId).stream()
+                .map(purchaseMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Purchase> findByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return purchaseRepository.findByIdIn(ids).stream()
+                .map(purchaseMapper::toDomain)
+                .toList();
     }
 
     @Override

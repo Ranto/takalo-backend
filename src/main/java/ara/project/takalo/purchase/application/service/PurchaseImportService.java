@@ -60,6 +60,7 @@ public class PurchaseImportService implements PurchaseImportServicePort {
             Purchase toCreate = new Purchase(
                     null,
                     null,
+                    null,
                     entry.getKey().atStartOfDay(ZoneOffset.UTC).toInstant(),
                     entry.getValue()
             );

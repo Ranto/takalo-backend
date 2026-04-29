@@ -32,7 +32,8 @@ import java.util.UUID;
         name = "purchases",
         indexes = {
                 @Index(name = "idx_purchase_date", columnList = "purchase_date"),
-                @Index(name = "idx_purchases_owner", columnList = "owner_id")
+                @Index(name = "idx_purchases_owner", columnList = "owner_id"),
+                @Index(name = "idx_purchases_budget", columnList = "budget_id")
         }
 )
 @Getter
@@ -51,6 +52,9 @@ public class PurchaseEntity {
 
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
+
+    @Column(name = "budget_id")
+    private UUID budgetId;
 
     @CreatedBy
     @Column(name = "created_by", nullable = false, updatable = false)

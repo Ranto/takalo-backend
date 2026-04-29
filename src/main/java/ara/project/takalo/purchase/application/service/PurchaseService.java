@@ -1,10 +1,13 @@
 package ara.project.takalo.purchase.application.service;
 
+import ara.project.takalo.budget.application.port.in.BudgetServicePort;
+import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
+import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItem;
-import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
+import ara.project.takalo.shared.domain.exception.ForbiddenException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,6 +34,7 @@ public class PurchaseService implements PurchaseServicePort {
 
     private final PurchaseRepository repository;
     private final ProductServicePort productService;
+    private final BudgetServicePort budgetService;
     private final CurrentUserProvider currentUserProvider;
 
     @Override
@@ -37,6 +42,9 @@ public class PurchaseService implements PurchaseServicePort {
         Purchase withOwner = purchase.ownerId() == null
                 ? purchase.withOwner(currentUserProvider.id())
                 : purchase;
+        if (withOwner.budgetId() != null) {
+            requireBudgetEditor(withOwner.budgetId());
+        }
         Purchase purchaseToSave = getPurchaseWithProductName(withOwner);
         return repository.save(purchaseToSave);
     }
@@ -44,7 +52,8 @@ public class PurchaseService implements PurchaseServicePort {
     @Override
     public Purchase update(UUID id, Purchase purchase) {
         return repository.findById(id).map(existing -> {
-            Purchase withOwner = purchase.withOwner(existing.ownerId());
+            Purchase withOwner = purchase.withOwner(existing.ownerId())
+                    .withBudget(existing.budgetId());
             Purchase purchaseToSave = getPurchaseWithProductName(withOwner);
             return repository.save(purchaseToSave);
         }).orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
@@ -52,6 +61,12 @@ public class PurchaseService implements PurchaseServicePort {
 
     @Override
     public void delete(UUID id) {
+        Purchase existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
+        if (!existing.ownerId().equals(currentUserProvider.id())
+                && !currentUserProvider.hasAuthority(PERM_READ_ANY)) {
+            throw new AccessDeniedException("Accès refusé à cet achat");
+        }
         repository.deleteById(id);
     }
 
@@ -74,6 +89,57 @@ public class PurchaseService implements PurchaseServicePort {
             return repository.findByDateRange(start, end, page, limit);
         }
         return repository.findByDateRangeAndOwner(start, end, currentUserProvider.id(), page, limit);
+    }
+
+    @Override
+    public Purchase reassignBudget(UUID purchaseId, UUID newBudgetId, Instant date, String raison) {
+        Purchase existing = repository.findById(purchaseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
+
+        UUID currentUserId = currentUserProvider.id();
+        if (!existing.ownerId().equals(currentUserId)) {
+            throw new AccessDeniedException("Accès refusé à cet achat");
+        }
+
+        UUID oldBudgetId = existing.budgetId();
+        if (oldBudgetId != null) {
+            requireBudgetEditor(oldBudgetId);
+        }
+        if (newBudgetId != null) {
+            requireBudgetEditor(newBudgetId);
+        }
+
+        Purchase updated = repository.save(existing.withBudget(newBudgetId));
+
+        UUID correlationId = UUID.randomUUID();
+        java.math.BigDecimal amount = existing.getTotalAmount();
+        if (oldBudgetId != null) {
+            budgetService.recordPurchaseUnassignment(oldBudgetId, purchaseId, amount, date, raison, correlationId);
+        }
+        if (newBudgetId != null) {
+            budgetService.recordPurchaseAssignment(newBudgetId, purchaseId, amount, date, raison, correlationId);
+        }
+        return updated;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Purchase> findByBudgetId(UUID budgetId) {
+        return repository.findByBudgetId(budgetId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Purchase> findByIds(Collection<UUID> ids) {
+        return repository.findByIds(ids);
+    }
+
+    private void requireBudgetEditor(UUID budgetId) {
+        Budget budget = budgetService.getRawById(budgetId);
+        Set<UUID> editorIds = budget.editorIds() == null ? Set.of() : budget.editorIds();
+        if (!editorIds.contains(currentUserProvider.id())) {
+            throw new ForbiddenException("Vous n'êtes pas éditeur de ce budget");
+        }
     }
 
     private @NonNull Purchase getPurchaseWithProductName(Purchase purchase) {
@@ -101,6 +167,7 @@ public class PurchaseService implements PurchaseServicePort {
         return new Purchase(
                 purchase.id(),
                 purchase.ownerId(),
+                purchase.budgetId(),
                 purchase.purchaseDate(),
                 enrichedItems
         );

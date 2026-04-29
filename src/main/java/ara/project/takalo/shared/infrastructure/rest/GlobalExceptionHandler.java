@@ -2,6 +2,8 @@ package ara.project.takalo.shared.infrastructure.rest;
 
 import ara.project.takalo.purchase.domain.exception.UnsupportedImportFormatException;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
+import ara.project.takalo.shared.domain.exception.ForbiddenException;
+import ara.project.takalo.shared.domain.exception.InvalidOperationException;
 import ara.project.takalo.shared.infrastructure.rest.dto.ErrorResponse;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -127,6 +129,38 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
                 "Permission insuffisante",
+                LocalDateTime.now(),
+                request.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(InvalidOperationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ApiResponse(
+            responseCode = "400",
+            description = "Opération invalide",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+    )
+    public ErrorResponse handleInvalidOperation(InvalidOperationException ex, HttpServletRequest request) {
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                LocalDateTime.now(),
+                request.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ApiResponse(
+            responseCode = "403",
+            description = "Accès interdit",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+    )
+    public ErrorResponse handleForbidden(ForbiddenException ex, HttpServletRequest request) {
+        return new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                ex.getMessage(),
                 LocalDateTime.now(),
                 request.getRequestURI()
         );

@@ -74,7 +74,7 @@ class PurchaseImportServiceTest {
         when(productService.findIdByName("Pain")).thenReturn(Optional.of(painId));
         when(purchaseService.create(any())).thenAnswer(inv -> {
             Purchase p = inv.getArgument(0);
-            return new Purchase(UUID.randomUUID(), p.ownerId(), p.purchaseDate(), p.items());
+            return new Purchase(UUID.randomUUID(), p.ownerId(), p.budgetId(), p.purchaseDate(), p.items());
         });
 
         PurchaseImportResult result = service.importPurchases(ANY_STREAM, ImportFormat.EXCEL_XLSX);
