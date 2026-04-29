@@ -1,0 +1,17 @@
+INSERT INTO permissions (id, name, description)
+VALUES ('00000000-0000-0000-0000-000000000110', 'budget:create', 'Créer un budget'),
+       ('00000000-0000-0000-0000-000000000111', 'budget:read', 'Lire les budgets'),
+       ('00000000-0000-0000-0000-000000000112', 'budget:write', 'Modifier les budgets'),
+       ('00000000-0000-0000-0000-000000000113', 'budget:manage-editors', 'Gérer la liste des éditeurs d''un budget');
+
+-- ADMIN: toutes les permissions budget
+INSERT INTO role_permissions (role_id, permission_id)
+VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000110'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000111'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000112'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000113');
+
+-- USER: créer et lire les budgets
+INSERT INTO role_permissions (role_id, permission_id)
+VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000110'),
+       ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000111');
