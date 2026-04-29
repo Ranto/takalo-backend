@@ -1,10 +1,15 @@
 package ara.project.takalo.budget.infrastructure.rest;
 
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
+import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
 import ara.project.takalo.budget.domain.model.Budget;
+import ara.project.takalo.budget.domain.model.BudgetMovement;
+import ara.project.takalo.budget.domain.model.BudgetMovementSource;
+import ara.project.takalo.budget.domain.model.BudgetMovementType;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.budget.infrastructure.rest.mapper.BudgetWebMapper;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
+import ara.project.takalo.shared.domain.exception.ForbiddenException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.user.application.port.in.UserServicePort;
@@ -31,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -198,6 +204,53 @@ class BudgetControllerTest {
 
         mockMvc.perform(delete("/api/v1/budgets/{id}", id))
                 .andExpect(status().isNotFound());
+    }
+
+    // ------------------------------------------------------------------
+    // Restriction de modification aux éditeurs (S39 / S40 / S41)
+    // ------------------------------------------------------------------
+
+    @Test
+    void update_whenServiceThrowsForbidden_returns403() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(service.update(org.mockito.ArgumentMatchers.eq(id), any(BudgetUpdateCommand.class)))
+                .thenThrow(new ForbiddenException("Vous n'êtes pas autorisé à modifier ce budget"));
+
+        mockMvc.perform(put("/api/v1/budgets/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "name": "Vacances" }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void deleteBudget_whenServiceThrowsForbidden_returns403() throws Exception {
+        UUID id = UUID.randomUUID();
+        org.mockito.Mockito.doThrow(new ForbiddenException("Vous n'êtes pas autorisé à modifier ce budget"))
+                .when(service).delete(id);
+
+        mockMvc.perform(delete("/api/v1/budgets/{id}", id))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void movements_authenticatedReader_returns200_evenWhenNotEditor() throws Exception {
+        UUID id = UUID.randomUUID();
+        BudgetMovement credit = new BudgetMovement(UUID.randomUUID(), id,
+                BudgetMovementType.CREDIT_EXTERNE, new BigDecimal("200.00"),
+                Instant.parse("2026-04-15T09:00:00Z"), "Cadeau",
+                null, null, BudgetMovementSource.INCONNUE, null, null, null);
+        when(service.findMovements(id, null)).thenReturn(List.of(credit));
+
+        mockMvc.perform(get("/api/v1/budgets/{id}/movements", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].type").value("CREDIT_EXTERNE"))
+                .andExpect(jsonPath("$[0].source").value("INCONNUE"))
+                .andExpect(jsonPath("$[0].montant").value(200.00));
     }
 
     @Test

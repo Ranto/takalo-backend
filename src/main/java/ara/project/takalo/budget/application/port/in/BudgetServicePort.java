@@ -50,6 +50,10 @@ public interface BudgetServicePort {
     /** Transfert entre deux budgets. Mute les deux fonds, dans la même transaction. */
     BudgetTransferResult transfer(BudgetTransferCommand command);
 
-    /** Liste des mouvements d'un budget, filtrable par type. Lecture ouverte. */
+    /**
+     * Liste des mouvements d'un budget, filtrable par type.
+     * Lecture ouverte à tout utilisateur authentifié porteur de {@code budget:read}
+     * (S41) — pas de restriction éditeur ici, contrairement à update/delete/transfer/credit.
+     */
     List<BudgetMovement> findMovements(UUID budgetId, BudgetMovementType typeFilter);
 }

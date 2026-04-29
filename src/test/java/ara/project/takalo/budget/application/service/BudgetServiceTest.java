@@ -524,6 +524,50 @@ class BudgetServiceTest {
         verify(repository, never()).deleteById(any());
     }
 
+    // ------------------------------------------------------------------
+    // Restriction de modification aux éditeurs (S39 / S41)
+    // ------------------------------------------------------------------
+
+    @Test
+    void update_byNonEditor_throwsForbidden_andDoesNotPersist() {
+        UUID id = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        when(repository.findById(id)).thenReturn(Optional.of(budget(id, BigDecimal.ZERO, bob)));
+        when(currentUserProvider.id()).thenReturn(alice);
+
+        assertThatThrownBy(() -> service.update(id,
+                new ara.project.takalo.budget.application.port.in.BudgetUpdateCommand(
+                        "Vacances", null, null)))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void findMovements_byNonEditor_returnsMovements_whenBudgetExists() {
+        UUID id = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        when(repository.existsById(id)).thenReturn(true);
+        BudgetMovement credit = new BudgetMovement(UUID.randomUUID(), id,
+                BudgetMovementType.CREDIT_EXTERNE, new BigDecimal("200.00"),
+                Instant.parse("2026-04-15T09:00:00Z"), "Cadeau",
+                null, null, BudgetMovementSource.INCONNUE, null, null, null);
+        when(movementRepository.findByBudgetIdOrderByOccurredAtAsc(id))
+                .thenReturn(List.of(credit));
+
+        // alice n'est pas éditrice, mais findMovements ne consulte pas editorIds.
+        // Le mock currentUserProvider n'est volontairement pas paramétré : aucun appel attendu.
+        List<BudgetMovement> result = service.findMovements(id, null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).type()).isEqualTo(BudgetMovementType.CREDIT_EXTERNE);
+        assertThat(result.get(0).source()).isEqualTo(BudgetMovementSource.INCONNUE);
+        // Sanity : on ne lookup pas le budget pour vérifier les éditeurs.
+        verify(repository, never()).findById(any());
+    }
+
     @Test
     void transfer_atomic_unknownTargetLeavesSourceUnchanged() {
         UUID alice = UUID.randomUUID();
