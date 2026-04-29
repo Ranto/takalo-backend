@@ -7,11 +7,13 @@ import ara.project.takalo.budget.domain.model.BudgetEditor;
 import ara.project.takalo.budget.domain.model.BudgetMovement;
 import ara.project.takalo.budget.domain.model.BudgetMovementSource;
 import ara.project.takalo.budget.domain.model.BudgetMovementType;
+import ara.project.takalo.budget.domain.model.BudgetTimeline;
+import ara.project.takalo.budget.domain.model.BudgetTimelineEvent;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
+import ara.project.takalo.shared.domain.exception.InvalidOperationException;
 import ara.project.takalo.budget.infrastructure.rest.mapper.BudgetWebMapper;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
 import ara.project.takalo.shared.domain.exception.ForbiddenException;
-import ara.project.takalo.shared.domain.exception.InvalidOperationException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.user.application.port.in.UserServicePort;
@@ -253,6 +255,52 @@ class BudgetControllerTest {
                 .andExpect(jsonPath("$[0].type").value("CREDIT_EXTERNE"))
                 .andExpect(jsonPath("$[0].source").value("INCONNUE"))
                 .andExpect(jsonPath("$[0].montant").value(200.00));
+    }
+
+    // ------------------------------------------------------------------
+    // Timeline (S57, S58)
+    // ------------------------------------------------------------------
+
+    @Test
+    void getTimeline_returns200_withEventsAndReferenceBalances() throws Exception {
+        UUID id = UUID.randomUUID();
+        BudgetTimelineEvent creation = new BudgetTimelineEvent(
+                Instant.parse("2026-04-01T08:00:00Z"), BudgetMovementType.CREATION,
+                new BigDecimal("500.00"), new BigDecimal("500.00"),
+                null, null, null, null, null);
+        BudgetTimelineEvent achat = new BudgetTimelineEvent(
+                Instant.parse("2026-04-10T12:00:00Z"), BudgetMovementType.ACHAT,
+                new BigDecimal("-80.00"), new BigDecimal("420.00"),
+                null, null, UUID.randomUUID(), null, null);
+        BudgetTimeline timeline = new BudgetTimeline(List.of(creation, achat),
+                new BigDecimal("500.00"), new BigDecimal("420.00"));
+        when(service.findTimeline(org.mockito.ArgumentMatchers.eq(id), any(), any()))
+                .thenReturn(timeline);
+
+        mockMvc.perform(get("/api/v1/budgets/{id}/timeline", id)
+                        .param("start", "2026-04-01T00:00:00Z")
+                        .param("end", "2026-04-30T23:59:59Z"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events.length()").value(2))
+                .andExpect(jsonPath("$.events[0].type").value("CREATION"))
+                .andExpect(jsonPath("$.events[1].type").value("ACHAT"))
+                .andExpect(jsonPath("$.events[1].remainingBalance").value(420.00))
+                .andExpect(jsonPath("$.restRefStart").value(500.00))
+                .andExpect(jsonPath("$.restRefEnd").value(420.00));
+    }
+
+    @Test
+    void getTimeline_invalidWindow_returns400() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(service.findTimeline(org.mockito.ArgumentMatchers.eq(id), any(), any()))
+                .thenThrow(new InvalidOperationException(
+                        "La date de début doit être antérieure ou égale à la date de fin"));
+
+        mockMvc.perform(get("/api/v1/budgets/{id}/timeline", id)
+                        .param("start", "2026-05-01T00:00:00Z")
+                        .param("end", "2026-04-01T00:00:00Z"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
     // ------------------------------------------------------------------
