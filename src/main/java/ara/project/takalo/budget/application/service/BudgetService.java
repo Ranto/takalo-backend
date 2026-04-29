@@ -8,6 +8,7 @@ import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
 import ara.project.takalo.budget.application.port.out.BudgetMovementRepository;
 import ara.project.takalo.budget.application.port.out.BudgetRepository;
 import ara.project.takalo.budget.domain.model.Budget;
+import ara.project.takalo.budget.domain.model.BudgetEditor;
 import ara.project.takalo.budget.domain.model.BudgetMovement;
 import ara.project.takalo.budget.domain.model.BudgetMovementSource;
 import ara.project.takalo.budget.domain.model.BudgetMovementType;
@@ -18,6 +19,8 @@ import ara.project.takalo.shared.domain.exception.InvalidOperationException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
+import ara.project.takalo.user.application.port.in.UserServicePort;
+import ara.project.takalo.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +41,7 @@ public class BudgetService implements BudgetServicePort {
     private final BudgetRepository repository;
     private final BudgetMovementRepository movementRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final UserServicePort userService;
 
     @Override
     public Budget create(Budget budget) {
@@ -272,6 +276,72 @@ public class BudgetService implements BudgetServicePort {
         return typeFilter == null
                 ? movementRepository.findByBudgetIdOrderByOccurredAtAsc(budgetId)
                 : movementRepository.findByBudgetIdAndTypeOrderByOccurredAtAsc(budgetId, typeFilter);
+    }
+
+    @Override
+    public BudgetWithBalance addEditor(UUID budgetId, UUID userId) {
+        Budget budget = repository.findById(budgetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
+        requireCreator(budget);
+        userService.getById(userId);
+
+        Set<UUID> editors = new HashSet<>(safeEditors(budget));
+        if (!editors.add(userId)) {
+            throw new AlreadyExistsException("L'utilisateur est déjà éditeur de ce budget");
+        }
+        Budget saved = repository.save(withEditors(budget, editors));
+        return withBalance(saved);
+    }
+
+    @Override
+    public BudgetWithBalance removeEditor(UUID budgetId, UUID userId) {
+        Budget budget = repository.findById(budgetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
+        requireCreator(budget);
+        if (userId.equals(budget.createdBy())) {
+            throw new InvalidOperationException(
+                    "Le créateur ne peut pas être retiré de la liste des éditeurs");
+        }
+        Set<UUID> editors = new HashSet<>(safeEditors(budget));
+        if (!editors.remove(userId)) {
+            throw new ResourceNotFoundException("L'utilisateur n'est pas éditeur de ce budget");
+        }
+        Budget saved = repository.save(withEditors(budget, editors));
+        return withBalance(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BudgetEditor> listEditors(UUID budgetId) {
+        Budget budget = repository.findById(budgetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
+        UUID creatorId = budget.createdBy();
+        return safeEditors(budget).stream()
+                .map(uid -> {
+                    User u = userService.getById(uid);
+                    return new BudgetEditor(uid, u.displayName(), uid.equals(creatorId));
+                })
+                .toList();
+    }
+
+    private void requireCreator(Budget b) {
+        if (!b.createdBy().equals(currentUserProvider.id())) {
+            throw new ForbiddenException(
+                    "Seul le créateur peut gérer la liste des éditeurs");
+        }
+    }
+
+    private Budget withEditors(Budget b, Set<UUID> editors) {
+        return new Budget(
+                b.id(),
+                b.name(),
+                b.description(),
+                b.initialFund(),
+                b.createdBy(),
+                editors,
+                b.createdAt(),
+                Instant.now()
+        );
     }
 
     private static Set<UUID> safeEditors(Budget b) {

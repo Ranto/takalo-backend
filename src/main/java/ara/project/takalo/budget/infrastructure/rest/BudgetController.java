@@ -6,6 +6,8 @@ import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.budget.domain.model.BudgetMovementType;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetCreditRequest;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetEditorAddRequest;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetEditorResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetLightResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetMovementResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetRequest;
@@ -189,6 +191,63 @@ public class BudgetController {
             @RequestParam(required = false) BudgetMovementType type) {
         return service.findMovements(id, type).stream()
                 .map(mapper::toMovementResponse)
+                .toList();
+    }
+
+    @PostMapping("/{id}/editors")
+    @PreAuthorize("hasAuthority('PERM_budget:manage-editors')")
+    @Operation(summary = "Ajouter un éditeur à un budget",
+            description = "Ajoute un utilisateur à la liste des éditeurs. Seul le créateur peut effectuer cette opération.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Éditeur ajouté"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Seul le créateur peut gérer la liste des éditeurs",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Budget ou utilisateur introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Utilisateur déjà éditeur de ce budget",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public BudgetResponse addEditor(
+            @Parameter(description = "Identifiant du budget") @PathVariable UUID id,
+            @Valid @RequestBody BudgetEditorAddRequest request) {
+        return mapper.toResponse(service.addEditor(id, request.userId()));
+    }
+
+    @DeleteMapping("/{id}/editors/{userId}")
+    @PreAuthorize("hasAuthority('PERM_budget:manage-editors')")
+    @Operation(summary = "Retirer un éditeur d'un budget",
+            description = "Retire un utilisateur de la liste des éditeurs. Seul le créateur peut effectuer cette opération.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Éditeur retiré"),
+            @ApiResponse(responseCode = "400", description = "Le créateur ne peut pas être retiré",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Seul le créateur peut gérer la liste des éditeurs",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Budget introuvable ou utilisateur non éditeur",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public BudgetResponse removeEditor(
+            @Parameter(description = "Identifiant du budget") @PathVariable UUID id,
+            @Parameter(description = "Identifiant de l'utilisateur") @PathVariable UUID userId) {
+        return mapper.toResponse(service.removeEditor(id, userId));
+    }
+
+    @GetMapping("/{id}/editors")
+    @PreAuthorize("hasAuthority('PERM_budget:read')")
+    @Operation(summary = "Lister les éditeurs d'un budget",
+            description = "Renvoie la liste des éditeurs avec leur nom d'affichage et un drapeau indiquant le créateur. "
+                    + "Lecture ouverte à tout utilisateur authentifié porteur de budget:read.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Liste des éditeurs"),
+            @ApiResponse(responseCode = "404", description = "Budget introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public List<BudgetEditorResponse> listEditors(
+            @Parameter(description = "Identifiant du budget") @PathVariable UUID id) {
+        return service.listEditors(id).stream()
+                .map(mapper::toEditorResponse)
                 .toList();
     }
 }

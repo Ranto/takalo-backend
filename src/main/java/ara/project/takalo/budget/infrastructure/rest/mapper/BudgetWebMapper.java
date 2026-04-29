@@ -4,9 +4,11 @@ import ara.project.takalo.budget.application.port.in.BudgetCreditCommand;
 import ara.project.takalo.budget.application.port.in.BudgetTransferCommand;
 import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
 import ara.project.takalo.budget.domain.model.Budget;
+import ara.project.takalo.budget.domain.model.BudgetEditor;
 import ara.project.takalo.budget.domain.model.BudgetMovement;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetCreditRequest;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetEditorResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetLightResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetMovementResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetRequest;
@@ -101,6 +103,10 @@ public class BudgetWebMapper {
                 m.source(),
                 m.counterpartBudgetId()
         );
+    }
+
+    public BudgetEditorResponse toEditorResponse(BudgetEditor editor) {
+        return new BudgetEditorResponse(editor.userId(), editor.displayName(), editor.creator());
     }
 
     private BigDecimal scale(BigDecimal value) {
