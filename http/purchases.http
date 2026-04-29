@@ -1,0 +1,335 @@
+### Récupérer un access token Keycloak (password grant)
+POST http://localhost:8081/realms/takalo/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type = password &
+client_id = takalo-backend &
+username = admin &
+password = adminadmin
+
+> {%
+    client.global.set("access_token", response.body.access_token);
+    client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Préparer une catégorie
+POST http://localhost:8080/api/v1/categories
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "Épicerie"
+}
+
+> {%
+    client.global.set("category_id", response.body.id);
+%}
+
+### Préparer un produit
+POST http://localhost:8080/api/v1/products
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Pâtes complètes",
+  "categoryId": "{{category_id}}"
+}
+
+> {%
+    client.global.set("product_id", response.body.id);
+%}
+
+### Préparer un budget source
+POST http://localhost:8080/api/v1/budgets
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Achats Avril",
+  "fond": 1000.00
+}
+
+> {%
+    client.global.set("budget_id", response.body.id);
+%}
+
+### Préparer un budget cible (pour réassignation)
+POST http://localhost:8080/api/v1/budgets
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Achats Mai",
+  "fond": 800.00
+}
+
+> {%
+    client.global.set("target_budget_id", response.body.id);
+%}
+
+### Créer un achat (cas nominal — budget explicite)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T10:30:00Z",
+  "budgetId": "{{budget_id}}",
+  "items": [
+    {
+      "productId": "{{product_id}}",
+      "unitPrice": 2.50,
+      "quantity": 3,
+      "discount": 0.50,
+      "expiryDate": "2026-12-31",
+      "storeName": "Carrefour Antananarivo"
+    }
+  ]
+}
+
+> {%
+    client.global.set("purchase_id", response.body.id);
+%}
+
+### Créer un achat — budget absent (utilise le budget par défaut)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T11:00:00Z",
+  "items": [
+    {
+      "productId": "{{product_id}}",
+      "unitPrice": 1.00,
+      "quantity": 2
+    }
+  ]
+}
+
+### Créer un achat — budgetId explicitement null (aucun budget)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T12:00:00Z",
+  "budgetId": null,
+  "items": [
+    {
+      "productId": "{{product_id}}",
+      "unitPrice": 1.20,
+      "quantity": 1
+    }
+  ]
+}
+
+### Créer un achat — date future (400)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2099-01-01T00:00:00Z",
+  "items": [
+    {
+      "productId": "{{product_id}}",
+      "unitPrice": 1.00,
+      "quantity": 1
+    }
+  ]
+}
+
+### Créer un achat — items vide (400)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T10:00:00Z",
+  "items": []
+}
+
+### Créer un achat — quantité non positive (400)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T10:00:00Z",
+  "items": [
+    {
+      "productId": "{{product_id}}",
+      "unitPrice": 1.00,
+      "quantity": 0
+    }
+  ]
+}
+
+### Créer un achat — prix unitaire négatif (400)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T10:00:00Z",
+  "items": [
+    {
+      "productId": "{{product_id}}",
+      "unitPrice": -1.00,
+      "quantity": 1
+    }
+  ]
+}
+
+### Créer un achat — produit inconnu (404)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T10:00:00Z",
+  "items": [
+    {
+      "productId": "00000000-0000-0000-0000-000000000000",
+      "unitPrice": 1.00,
+      "quantity": 1
+    }
+  ]
+}
+
+### Obtenir un achat par id
+GET http://localhost:8080/api/v1/purchases/{{purchase_id}}
+Authorization: Bearer {{access_token}}
+
+### Obtenir un achat — id inconnu (404)
+GET http://localhost:8080/api/v1/purchases/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+
+### Rechercher des achats (sans filtre)
+GET http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+
+### Rechercher des achats — fenêtre [start, end[
+GET http://localhost:8080/api/v1/purchases?start=2026-04-01T00:00:00Z&end=2026-05-01T00:00:00Z
+Authorization: Bearer {{access_token}}
+
+### Rechercher des achats — pagination personnalisée
+GET http://localhost:8080/api/v1/purchases?page=0&size=5
+Authorization: Bearer {{access_token}}
+
+### Mettre à jour un achat
+PUT http://localhost:8080/api/v1/purchases/{{purchase_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-16T09:00:00Z",
+  "budgetId": "{{budget_id}}",
+  "items": [
+    {
+      "productId": "{{product_id}}",
+      "unitPrice": 2.20,
+      "quantity": 4,
+      "storeName": "Shoprite"
+    }
+  ]
+}
+
+### Mettre à jour un achat — id inconnu (404)
+PUT http://localhost:8080/api/v1/purchases/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-16T09:00:00Z",
+  "items": [
+    {
+      "productId": "{{product_id}}",
+      "unitPrice": 1.00,
+      "quantity": 1
+    }
+  ]
+}
+
+### Réassigner un achat à un autre budget
+PATCH http://localhost:8080/api/v1/purchases/{{purchase_id}}/budget
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "budgetId": "{{target_budget_id}}",
+  "date": "2026-04-20T10:00:00Z",
+  "raison": "Bascule sur le budget de mai"
+}
+
+### Réassigner un achat — budgetId manquant (400)
+PATCH http://localhost:8080/api/v1/purchases/{{purchase_id}}/budget
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "date": "2026-04-20T10:00:00Z",
+  "raison": "Invalide"
+}
+
+### Réassigner un achat — raison vide (400)
+PATCH http://localhost:8080/api/v1/purchases/{{purchase_id}}/budget
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "budgetId": "{{target_budget_id}}",
+  "date": "2026-04-20T10:00:00Z",
+  "raison": "   "
+}
+
+### Réassigner un achat — achat inconnu (404)
+PATCH http://localhost:8080/api/v1/purchases/00000000-0000-0000-0000-000000000000/budget
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "budgetId": "{{target_budget_id}}",
+  "date": "2026-04-20T10:00:00Z",
+  "raison": "Test"
+}
+
+### Importer des achats — fichier CSV (multipart)
+POST http://localhost:8080/api/v1/purchases/import
+Authorization: Bearer {{access_token}}
+Content-Type: multipart/form-data; boundary=----TakaloBoundary
+
+------TakaloBoundary
+Content-Disposition: form-data; name="file"; filename="achats.csv"
+Content-Type: text/csv
+
+< ./samples/achats.csv
+------TakaloBoundary--
+
+### Importer des achats — fichier XLSX (multipart)
+POST http://localhost:8080/api/v1/purchases/import
+Authorization: Bearer {{access_token}}
+Content-Type: multipart/form-data; boundary=----TakaloBoundary
+
+------TakaloBoundary
+Content-Disposition: form-data; name="file"; filename="achats.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./samples/achats.xlsx
+------TakaloBoundary--
+
+### Importer des achats — extension non supportée (400)
+POST http://localhost:8080/api/v1/purchases/import
+Authorization: Bearer {{access_token}}
+Content-Type: multipart/form-data; boundary=----TakaloBoundary
+
+------TakaloBoundary
+Content-Disposition: form-data; name="file"; filename="achats.txt"
+Content-Type: text/plain
+
+contenu inutile
+------TakaloBoundary--
+
+### Sans authentification (401)
+GET http://localhost:8080/api/v1/purchases

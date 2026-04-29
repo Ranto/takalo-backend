@@ -48,6 +48,21 @@ Content-Type: application/json
   "fond": 0.00
 }
 
+### Créer un second budget (cible pour les transferts)
+POST http://localhost:8080/api/v1/budgets
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Loisirs",
+  "description": "Budget loisirs",
+  "fond": 200.00
+}
+
+> {%
+    client.global.set("target_budget_id", response.body.id);
+%}
+
 ### Créer un budget — nom vide (400)
 POST http://localhost:8080/api/v1/budgets
 Authorization: Bearer {{access_token}}
@@ -91,6 +106,205 @@ Authorization: Bearer {{access_token}}
 
 ### Lister les budgets — pagination personnalisée
 GET http://localhost:8080/api/v1/budgets?page=0&size=5
+Authorization: Bearer {{access_token}}
+
+### Mettre à jour un budget — nom et description
+PUT http://localhost:8080/api/v1/budgets/{{budget_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Courses du mois",
+  "description": "Budget mis à jour"
+}
+
+### Mettre à jour un budget — nom vide (400)
+PUT http://localhost:8080/api/v1/budgets/{{budget_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "   ",
+  "description": "Invalide"
+}
+
+### Mettre à jour un budget — id inconnu (404)
+PUT http://localhost:8080/api/v1/budgets/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Inexistant",
+  "description": "—"
+}
+
+### Créditer un budget depuis une source externe
+POST http://localhost:8080/api/v1/budgets/{{budget_id}}/credits
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "montant": 150.00,
+  "date": "2026-04-29T10:00:00Z",
+  "raison": "Apport personnel"
+}
+
+### Créditer un budget — montant non strictement positif (400)
+POST http://localhost:8080/api/v1/budgets/{{budget_id}}/credits
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "montant": 0,
+  "date": "2026-04-29T10:00:00Z",
+  "raison": "Invalide"
+}
+
+### Créditer un budget — raison manquante (400)
+POST http://localhost:8080/api/v1/budgets/{{budget_id}}/credits
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "montant": 50.00,
+  "date": "2026-04-29T10:00:00Z"
+}
+
+### Créditer un budget — id inconnu (404)
+POST http://localhost:8080/api/v1/budgets/00000000-0000-0000-0000-000000000000/credits
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "montant": 50.00,
+  "date": "2026-04-29T10:00:00Z",
+  "raison": "Test"
+}
+
+### Transférer entre deux budgets (cas nominal)
+POST http://localhost:8080/api/v1/budgets/transfers
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "sourceBudgetId": "{{budget_id}}",
+  "targetBudgetId": "{{target_budget_id}}",
+  "montant": 75.00,
+  "date": "2026-04-29T11:00:00Z",
+  "raison": "Réallocation mensuelle"
+}
+
+### Transférer — même source et cible (400)
+POST http://localhost:8080/api/v1/budgets/transfers
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "sourceBudgetId": "{{budget_id}}",
+  "targetBudgetId": "{{budget_id}}",
+  "montant": 10.00,
+  "date": "2026-04-29T11:00:00Z",
+  "raison": "Invalide"
+}
+
+### Transférer — montant non strictement positif (400)
+POST http://localhost:8080/api/v1/budgets/transfers
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "sourceBudgetId": "{{budget_id}}",
+  "targetBudgetId": "{{target_budget_id}}",
+  "montant": 0,
+  "date": "2026-04-29T11:00:00Z",
+  "raison": "Invalide"
+}
+
+### Transférer — budget source inconnu (404)
+POST http://localhost:8080/api/v1/budgets/transfers
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "sourceBudgetId": "00000000-0000-0000-0000-000000000000",
+  "targetBudgetId": "{{target_budget_id}}",
+  "montant": 10.00,
+  "date": "2026-04-29T11:00:00Z",
+  "raison": "Test"
+}
+
+### Consulter les mouvements d'un budget
+GET http://localhost:8080/api/v1/budgets/{{budget_id}}/movements
+Authorization: Bearer {{access_token}}
+
+### Consulter les mouvements — filtre par type CREDIT_EXTERNAL
+GET http://localhost:8080/api/v1/budgets/{{budget_id}}/movements?type=CREDIT_EXTERNAL
+Authorization: Bearer {{access_token}}
+
+### Consulter les mouvements — filtre par type TRANSFER_OUT
+GET http://localhost:8080/api/v1/budgets/{{budget_id}}/movements?type=TRANSFER_OUT
+Authorization: Bearer {{access_token}}
+
+### Consulter les mouvements — id inconnu (404)
+GET http://localhost:8080/api/v1/budgets/00000000-0000-0000-0000-000000000000/movements
+Authorization: Bearer {{access_token}}
+
+### Consulter la timeline d'un budget
+GET http://localhost:8080/api/v1/budgets/{{budget_id}}/timeline
+Authorization: Bearer {{access_token}}
+
+### Consulter la timeline — fenêtre [start, end]
+GET http://localhost:8080/api/v1/budgets/{{budget_id}}/timeline?start=2026-04-01T00:00:00Z&end=2026-04-30T23:59:59Z
+Authorization: Bearer {{access_token}}
+
+### Consulter la timeline — fenêtre invalide start > end (400)
+GET http://localhost:8080/api/v1/budgets/{{budget_id}}/timeline?start=2026-05-01T00:00:00Z&end=2026-04-01T00:00:00Z
+Authorization: Bearer {{access_token}}
+
+### Lister les éditeurs d'un budget
+GET http://localhost:8080/api/v1/budgets/{{budget_id}}/editors
+Authorization: Bearer {{access_token}}
+
+### Ajouter un éditeur à un budget
+POST http://localhost:8080/api/v1/budgets/{{budget_id}}/editors
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "userId": "00000000-0000-0000-0000-000000000001"
+}
+
+### Ajouter un éditeur — userId manquant (400)
+POST http://localhost:8080/api/v1/budgets/{{budget_id}}/editors
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+}
+
+### Ajouter un éditeur — utilisateur déjà éditeur (409)
+POST http://localhost:8080/api/v1/budgets/{{budget_id}}/editors
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "userId": "00000000-0000-0000-0000-000000000001"
+}
+
+### Retirer un éditeur d'un budget
+DELETE http://localhost:8080/api/v1/budgets/{{budget_id}}/editors/00000000-0000-0000-0000-000000000001
+Authorization: Bearer {{access_token}}
+
+### Retirer un éditeur — utilisateur non éditeur (404)
+DELETE http://localhost:8080/api/v1/budgets/{{budget_id}}/editors/00000000-0000-0000-0000-000000000099
+Authorization: Bearer {{access_token}}
+
+### Supprimer un budget
+DELETE http://localhost:8080/api/v1/budgets/{{budget_id}}
+Authorization: Bearer {{access_token}}
+
+### Supprimer un budget — id inconnu (404)
+DELETE http://localhost:8080/api/v1/budgets/00000000-0000-0000-0000-000000000000
 Authorization: Bearer {{access_token}}
 
 ### Sans authentification (401)

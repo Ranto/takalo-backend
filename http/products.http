@@ -1,0 +1,146 @@
+### Récupérer un access token Keycloak (password grant)
+POST http://localhost:8081/realms/takalo/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type = password &
+client_id = takalo-backend &
+username = admin &
+password = adminadmin
+
+> {%
+    client.global.set("access_token", response.body.access_token);
+    client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Créer une catégorie pré-requise pour les produits
+POST http://localhost:8080/api/v1/categories
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "label": "Boissons",
+  "description": "Boissons fraîches"
+}
+
+> {%
+    client.global.set("category_id", response.body.id);
+%}
+
+### Créer un produit (cas nominal)
+POST http://localhost:8080/api/v1/products
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Yaourt nature",
+  "categoryId": "{{category_id}}"
+}
+
+> {%
+    client.global.set("product_id", response.body.id);
+%}
+
+### Créer un produit — sans catégorie (autorisé)
+POST http://localhost:8080/api/v1/products
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Eau plate"
+}
+
+### Créer un produit — nom vide (400)
+POST http://localhost:8080/api/v1/products
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "   ",
+  "categoryId": "{{category_id}}"
+}
+
+### Créer un produit — nom trop court (400)
+POST http://localhost:8080/api/v1/products
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "AB"
+}
+
+### Créer un produit — catégorie inconnue (404)
+POST http://localhost:8080/api/v1/products
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Produit fantôme",
+  "categoryId": "00000000-0000-0000-0000-000000000000"
+}
+
+### Obtenir un produit par id
+GET http://localhost:8080/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+
+### Obtenir un produit — id inconnu (404)
+GET http://localhost:8080/api/v1/products/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+
+### Lister tous les produits (page par défaut)
+GET http://localhost:8080/api/v1/products
+Authorization: Bearer {{access_token}}
+
+### Lister tous les produits — pagination personnalisée
+GET http://localhost:8080/api/v1/products?page=0&size=5
+Authorization: Bearer {{access_token}}
+
+### Rechercher des produits — filtre nom
+GET http://localhost:8080/api/v1/products/search?name=yaourt
+Authorization: Bearer {{access_token}}
+
+### Rechercher des produits — filtre catégories
+GET http://localhost:8080/api/v1/products/search?categoryIds={{category_id}}
+Authorization: Bearer {{access_token}}
+
+### Rechercher des produits — nom + catégories + pagination
+GET http://localhost:8080/api/v1/products/search?name=yaourt&categoryIds={{category_id}}&page=0&size=5
+Authorization: Bearer {{access_token}}
+
+### Mettre à jour un produit
+PUT http://localhost:8080/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Yaourt nature 0%",
+  "categoryId": "{{category_id}}"
+}
+
+### Mettre à jour un produit — nom invalide (400)
+PUT http://localhost:8080/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "  "
+}
+
+### Mettre à jour un produit — id inconnu (404)
+PUT http://localhost:8080/api/v1/products/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Inexistant"
+}
+
+### Supprimer un produit
+DELETE http://localhost:8080/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+
+### Supprimer un produit — id inconnu (404)
+DELETE http://localhost:8080/api/v1/products/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{access_token}}
+
+### Sans authentification (401)
+GET http://localhost:8080/api/v1/products
