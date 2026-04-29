@@ -116,6 +116,19 @@ public class BudgetService implements BudgetServicePort {
     }
 
     @Override
+    public void delete(UUID id) {
+        Budget budget = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
+
+        UUID currentUserId = currentUserProvider.id();
+        if (!safeEditors(budget).contains(currentUserId)) {
+            throw new ForbiddenException("Vous n'êtes pas autorisé à modifier ce budget");
+        }
+
+        repository.deleteById(id);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Budget getRawById(UUID id) {
         return repository.findById(id)

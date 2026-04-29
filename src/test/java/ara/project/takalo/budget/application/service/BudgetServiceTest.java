@@ -482,6 +482,48 @@ class BudgetServiceTest {
         verify(repository, never()).save(any());
     }
 
+    // ------------------------------------------------------------------
+    // Suppression (S37 / S38 — la garde 403 anticipe S40)
+    // ------------------------------------------------------------------
+
+    @Test
+    void delete_existingBudget_callsRepository() {
+        UUID id = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        when(repository.findById(id)).thenReturn(Optional.of(budget(id, BigDecimal.ZERO, alice)));
+        when(currentUserProvider.id()).thenReturn(alice);
+
+        service.delete(id);
+
+        verify(repository).deleteById(id);
+    }
+
+    @Test
+    void delete_unknownBudget_throws404() {
+        UUID id = UUID.randomUUID();
+        when(repository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(id))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Budget non trouvé");
+
+        verify(repository, never()).deleteById(any());
+    }
+
+    @Test
+    void delete_byNonEditor_throws403() {
+        UUID id = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        when(repository.findById(id)).thenReturn(Optional.of(budget(id, BigDecimal.ZERO, bob)));
+        when(currentUserProvider.id()).thenReturn(alice);
+
+        assertThatThrownBy(() -> service.delete(id))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(repository, never()).deleteById(any());
+    }
+
     @Test
     void transfer_atomic_unknownTargetLeavesSourceUnchanged() {
         UUID alice = UUID.randomUUID();

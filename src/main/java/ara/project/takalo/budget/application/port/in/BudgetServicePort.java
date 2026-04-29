@@ -20,6 +20,13 @@ public interface BudgetServicePort {
 
     BudgetWithBalance update(UUID id, BudgetUpdateCommand command);
 
+    /**
+     * Supprime un budget. Les achats associés sont détachés ({@code budgetId → null})
+     * sans être supprimés ; les mouvements et les éditeurs sont purgés en cascade.
+     * 404 si inconnu, 403 si l'utilisateur courant n'est pas éditeur.
+     */
+    void delete(UUID id);
+
     /** Renvoie le budget brut (sans calcul de reste). 404 si inconnu. */
     Budget getRawById(UUID id);
 

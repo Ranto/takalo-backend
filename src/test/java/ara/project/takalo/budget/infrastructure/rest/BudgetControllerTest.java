@@ -27,6 +27,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -176,6 +178,26 @@ class BudgetControllerTest {
                         .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors." + missingField).exists());
+    }
+
+    @Test
+    void deleteBudget_returns204() throws Exception {
+        UUID id = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/v1/budgets/{id}", id))
+                .andExpect(status().isNoContent());
+
+        verify(service).delete(id);
+    }
+
+    @Test
+    void deleteBudget_whenNotFound_returns404() throws Exception {
+        UUID id = UUID.randomUUID();
+        org.mockito.Mockito.doThrow(new ResourceNotFoundException("Budget non trouvé"))
+                .when(service).delete(id);
+
+        mockMvc.perform(delete("/api/v1/budgets/{id}", id))
+                .andExpect(status().isNotFound());
     }
 
     @Test

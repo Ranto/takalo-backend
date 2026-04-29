@@ -68,6 +68,11 @@ public class BudgetPersistenceAdapter implements BudgetRepository {
     }
 
     @Override
+    public void deleteById(UUID id) {
+        jpaRepository.deleteById(id);
+    }
+
+    @Override
     public PagedResponse<Budget> findAll(int page, int size) {
         Page<BudgetEntity> result = jpaRepository.findAll(PageRequest.of(page, size));
         return PaginationMapper.toPagedResponse(result, mapper::toDomain);

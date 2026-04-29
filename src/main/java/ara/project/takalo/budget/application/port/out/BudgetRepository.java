@@ -22,4 +22,6 @@ public interface BudgetRepository {
     Map<UUID, BigDecimal> totalPurchasesByBudgetIds(Collection<UUID> budgetIds);
 
     PagedResponse<Budget> findAll(int page, int size);
+
+    void deleteById(UUID id);
 }

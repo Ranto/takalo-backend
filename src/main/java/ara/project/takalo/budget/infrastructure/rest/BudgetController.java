@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -105,6 +106,22 @@ public class BudgetController {
             @Valid @RequestBody BudgetUpdateRequest request) {
         BudgetWithBalance updated = service.update(id, mapper.toCommand(request));
         return mapper.toResponse(updated);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('PERM_budget:write')")
+    @Operation(summary = "Supprimer un budget",
+            description = "Supprime le budget. Les achats associés sont détachés (budgetId → null) sans être supprimés.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Budget supprimé"),
+            @ApiResponse(responseCode = "403", description = "Utilisateur non éditeur du budget",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Budget introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public void delete(@Parameter(description = "Identifiant du budget") @PathVariable UUID id) {
+        service.delete(id);
     }
 
     @GetMapping
