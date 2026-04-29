@@ -1,11 +1,17 @@
 package ara.project.takalo.budget.infrastructure.rest.mapper;
 
+import ara.project.takalo.budget.application.port.in.BudgetCreditCommand;
+import ara.project.takalo.budget.application.port.in.BudgetTransferCommand;
 import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
 import ara.project.takalo.budget.domain.model.Budget;
+import ara.project.takalo.budget.domain.model.BudgetMovement;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetCreditRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetLightResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetMovementResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTransferRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetUpdateRequest;
 import org.springframework.stereotype.Component;
 
@@ -67,6 +73,33 @@ public class BudgetWebMapper {
                 reste,
                 b.createdBy(),
                 b.editorIds()
+        );
+    }
+
+    public BudgetCreditCommand toCommand(BudgetCreditRequest request) {
+        return new BudgetCreditCommand(request.montant(), request.date(), request.raison());
+    }
+
+    public BudgetTransferCommand toCommand(BudgetTransferRequest request) {
+        return new BudgetTransferCommand(
+                request.sourceBudgetId(),
+                request.targetBudgetId(),
+                request.montant(),
+                request.date(),
+                request.raison()
+        );
+    }
+
+    public BudgetMovementResponse toMovementResponse(BudgetMovement m) {
+        return new BudgetMovementResponse(
+                m.id(),
+                m.type(),
+                scale(m.amount()),
+                m.occurredAt(),
+                m.reason(),
+                m.correlationId(),
+                m.source(),
+                m.counterpartBudgetId()
         );
     }
 

@@ -9,6 +9,8 @@ import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.user.application.port.in.UserServicePort;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -146,6 +148,34 @@ class BudgetControllerTest {
         mockMvc.perform(get("/api/v1/budgets/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reste").value(-50.00));
+    }
+
+    @ParameterizedTest(name = "missing {0} returns 400 with field error on \"{0}\"")
+    @CsvSource({
+            "date,   '{ \"montant\": 100.00, \"raison\": \"Remboursement\" }'",
+            "raison, '{ \"montant\": 100.00, \"date\": \"2026-04-15T09:00:00Z\" }'"
+    })
+    void postCredit_missingDateOrReason_400(String missingField, String json) throws Exception {
+        UUID id = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/v1/budgets/{id}/credits", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors." + missingField).exists());
+    }
+
+    @ParameterizedTest(name = "missing {0} returns 400 with field error on \"{0}\"")
+    @CsvSource({
+            "date,   '{ \"sourceBudgetId\": \"11111111-1111-1111-1111-111111111111\", \"targetBudgetId\": \"22222222-2222-2222-2222-222222222222\", \"montant\": 50.00, \"raison\": \"Réallocation\" }'",
+            "raison, '{ \"sourceBudgetId\": \"11111111-1111-1111-1111-111111111111\", \"targetBudgetId\": \"22222222-2222-2222-2222-222222222222\", \"montant\": 50.00, \"date\": \"2026-04-29T10:00:00Z\" }'"
+    })
+    void postTransfer_missingDateOrReason_400(String missingField, String json) throws Exception {
+        mockMvc.perform(post("/api/v1/budgets/transfers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors." + missingField).exists());
     }
 
     @Test

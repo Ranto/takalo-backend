@@ -1,5 +1,6 @@
 package ara.project.takalo.budget.infrastructure.persistence.entities;
 
+import ara.project.takalo.budget.domain.model.BudgetMovementSource;
 import ara.project.takalo.budget.domain.model.BudgetMovementType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -65,6 +66,13 @@ public class BudgetMovementEntity {
 
     @Column(name = "purchase_id")
     private UUID purchaseId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", length = 40)
+    private BudgetMovementSource source;
+
+    @Column(name = "counterpart_budget_id")
+    private UUID counterpartBudgetId;
 
     @CreatedBy
     @Column(name = "created_by", nullable = false, updatable = false)

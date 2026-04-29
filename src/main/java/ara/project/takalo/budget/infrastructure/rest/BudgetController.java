@@ -1,11 +1,17 @@
 package ara.project.takalo.budget.infrastructure.rest;
 
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
+import ara.project.takalo.budget.application.port.in.BudgetTransferResult;
 import ara.project.takalo.budget.domain.model.Budget;
+import ara.project.takalo.budget.domain.model.BudgetMovementType;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetCreditRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetLightResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetMovementResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTransferRequest;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetTransferResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetUpdateRequest;
 import ara.project.takalo.budget.infrastructure.rest.mapper.BudgetWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
@@ -34,6 +40,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -107,5 +114,64 @@ public class BudgetController {
             @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
         return service.findAll(page, size).map(mapper::toLightResponse);
+    }
+
+    @PostMapping("/{id}/credits")
+    @PreAuthorize("hasAuthority('PERM_budget:write')")
+    @Operation(summary = "Créditer un budget depuis une source externe",
+            description = "Augmente le fond initial du budget. Source à ce jour : INCONNUE.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Crédit appliqué"),
+            @ApiResponse(responseCode = "400", description = "Données invalides ou montant non strictement positif",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Utilisateur non éditeur du budget",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Budget introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public BudgetResponse credit(
+            @Parameter(description = "Identifiant du budget") @PathVariable UUID id,
+            @Valid @RequestBody BudgetCreditRequest request) {
+        BudgetWithBalance updated = service.creditFromExternalSource(id, mapper.toCommand(request));
+        return mapper.toResponse(updated);
+    }
+
+    @PostMapping("/transfers")
+    @PreAuthorize("hasAuthority('PERM_budget:write')")
+    @Operation(summary = "Transférer un montant entre deux budgets",
+            description = "Déplace un montant strictement positif d'un budget source vers un budget cible.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Transfert appliqué"),
+            @ApiResponse(responseCode = "400", description = "Données invalides ou règle métier violée",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Utilisateur non éditeur de l'un des budgets",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Budget source ou cible introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public BudgetTransferResponse transfer(@Valid @RequestBody BudgetTransferRequest request) {
+        BudgetTransferResult result = service.transfer(mapper.toCommand(request));
+        return new BudgetTransferResponse(
+                mapper.toResponse(result.source()),
+                mapper.toResponse(result.target())
+        );
+    }
+
+    @GetMapping("/{id}/movements")
+    @PreAuthorize("hasAuthority('PERM_budget:read')")
+    @Operation(summary = "Consulter l'historique des mouvements d'un budget",
+            description = "Renvoie les mouvements du budget, ordonnés par date d'occurrence. Filtrable par type.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Mouvements trouvés"),
+            @ApiResponse(responseCode = "404", description = "Budget introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public List<BudgetMovementResponse> movements(
+            @Parameter(description = "Identifiant du budget") @PathVariable UUID id,
+            @Parameter(description = "Filtrer par type de mouvement (optionnel)")
+            @RequestParam(required = false) BudgetMovementType type) {
+        return service.findMovements(id, type).stream()
+                .map(mapper::toMovementResponse)
+                .toList();
     }
 }

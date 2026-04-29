@@ -14,6 +14,8 @@ public interface BudgetRepository {
 
     Optional<Budget> findById(UUID id);
 
+    boolean existsById(UUID id);
+
     boolean existsByName(String name);
 
     /** Renvoie pour chaque id la somme des montants d'achats associés. */

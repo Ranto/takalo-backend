@@ -18,6 +18,8 @@ public class BudgetMovementMapper {
                 entity.getReason(),
                 entity.getCorrelationId(),
                 entity.getPurchaseId(),
+                entity.getSource(),
+                entity.getCounterpartBudgetId(),
                 entity.getCreatedBy(),
                 entity.getCreatedAt()
         );
@@ -34,6 +36,8 @@ public class BudgetMovementMapper {
                 .reason(domain.reason())
                 .correlationId(domain.correlationId())
                 .purchaseId(domain.purchaseId())
+                .source(domain.source())
+                .counterpartBudgetId(domain.counterpartBudgetId())
                 .build();
     }
 }

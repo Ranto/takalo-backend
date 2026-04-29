@@ -1,11 +1,15 @@
 package ara.project.takalo.budget.application.service;
 
+import ara.project.takalo.budget.application.port.in.BudgetCreditCommand;
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
+import ara.project.takalo.budget.application.port.in.BudgetTransferCommand;
+import ara.project.takalo.budget.application.port.in.BudgetTransferResult;
 import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
 import ara.project.takalo.budget.application.port.out.BudgetMovementRepository;
 import ara.project.takalo.budget.application.port.out.BudgetRepository;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.budget.domain.model.BudgetMovement;
+import ara.project.takalo.budget.domain.model.BudgetMovementSource;
 import ara.project.takalo.budget.domain.model.BudgetMovementType;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
@@ -89,8 +93,7 @@ public class BudgetService implements BudgetServicePort {
                 .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
 
         UUID currentUserId = currentUserProvider.id();
-        Set<UUID> editorIds = existing.editorIds() == null ? Set.of() : existing.editorIds();
-        if (!editorIds.contains(currentUserId)) {
+        if (!safeEditors(existing).contains(currentUserId)) {
             throw new ForbiddenException("Vous n'êtes pas autorisé à modifier ce budget");
         }
 
@@ -109,9 +112,7 @@ public class BudgetService implements BudgetServicePort {
                 Instant.now()
         );
         Budget saved = repository.save(toSave);
-        BigDecimal total = repository.totalPurchasesByBudgetIds(List.of(saved.id()))
-                .getOrDefault(saved.id(), BigDecimal.ZERO);
-        return new BudgetWithBalance(saved, total);
+        return withBalance(saved);
     }
 
     @Override
@@ -140,8 +141,7 @@ public class BudgetService implements BudgetServicePort {
         Budget budget = repository.findById(budgetId)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
         UUID currentUserId = currentUserProvider.id();
-        Set<UUID> editorIds = budget.editorIds() == null ? Set.of() : budget.editorIds();
-        if (!editorIds.contains(currentUserId)) {
+        if (!safeEditors(budget).contains(currentUserId)) {
             throw new ForbiddenException("Vous n'êtes pas autorisé à modifier ce budget");
         }
         BigDecimal signed = type == BudgetMovementType.ASSIGNATION_ACHAT ? amount.negate() : amount;
@@ -155,8 +155,132 @@ public class BudgetService implements BudgetServicePort {
                 correlationId,
                 purchaseId,
                 null,
+                null,
+                null,
                 null
         );
         movementRepository.save(movement);
+    }
+
+    @Override
+    public BudgetWithBalance creditFromExternalSource(UUID budgetId, BudgetCreditCommand command) {
+        if (command.amount() == null || command.amount().signum() <= 0) {
+            throw new InvalidOperationException("Le montant du crédit doit être strictement positif");
+        }
+        Budget budget = repository.findById(budgetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
+        UUID currentUserId = currentUserProvider.id();
+        if (!safeEditors(budget).contains(currentUserId)) {
+            throw new ForbiddenException("Vous n'êtes pas autorisé à modifier ce budget");
+        }
+
+        Budget updated = withFund(budget, budget.initialFund().add(command.amount()));
+        Budget saved = repository.save(updated);
+
+        movementRepository.save(new BudgetMovement(
+                null,
+                saved.id(),
+                BudgetMovementType.CREDIT_EXTERNE,
+                command.amount(),
+                command.date(),
+                command.reason(),
+                null,
+                null,
+                BudgetMovementSource.INCONNUE,
+                null,
+                null,
+                null
+        ));
+
+        return withBalance(saved);
+    }
+
+    @Override
+    public BudgetTransferResult transfer(BudgetTransferCommand cmd) {
+        if (cmd.amount() == null || cmd.amount().signum() <= 0) {
+            throw new InvalidOperationException("Le montant du transfert doit être strictement positif");
+        }
+        if (cmd.sourceBudgetId().equals(cmd.targetBudgetId())) {
+            throw new InvalidOperationException("Le budget source et le budget cible doivent être différents");
+        }
+
+        Budget source = repository.findById(cmd.sourceBudgetId())
+                .orElseThrow(() -> new ResourceNotFoundException("Budget source non trouvé"));
+        Budget target = repository.findById(cmd.targetBudgetId())
+                .orElseThrow(() -> new ResourceNotFoundException("Budget cible non trouvé"));
+
+        UUID userId = currentUserProvider.id();
+        if (!safeEditors(source).contains(userId) || !safeEditors(target).contains(userId)) {
+            throw new ForbiddenException("Vous n'êtes pas éditeur de l'un des budgets");
+        }
+
+        Budget newSource = repository.save(withFund(source, source.initialFund().subtract(cmd.amount())));
+        Budget newTarget = repository.save(withFund(target, target.initialFund().add(cmd.amount())));
+
+        UUID correlationId = UUID.randomUUID();
+        movementRepository.save(new BudgetMovement(
+                null,
+                newSource.id(),
+                BudgetMovementType.TRANSFERT_SORTANT,
+                cmd.amount().negate(),
+                cmd.date(),
+                cmd.reason(),
+                correlationId,
+                null,
+                null,
+                newTarget.id(),
+                null,
+                null
+        ));
+        movementRepository.save(new BudgetMovement(
+                null,
+                newTarget.id(),
+                BudgetMovementType.TRANSFERT_ENTRANT,
+                cmd.amount(),
+                cmd.date(),
+                cmd.reason(),
+                correlationId,
+                null,
+                null,
+                newSource.id(),
+                null,
+                null
+        ));
+
+        return new BudgetTransferResult(withBalance(newSource), withBalance(newTarget));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BudgetMovement> findMovements(UUID budgetId, BudgetMovementType typeFilter) {
+        if (!repository.existsById(budgetId)) {
+            throw new ResourceNotFoundException("Budget non trouvé");
+        }
+        return typeFilter == null
+                ? movementRepository.findByBudgetIdOrderByOccurredAtAsc(budgetId)
+                : movementRepository.findByBudgetIdAndTypeOrderByOccurredAtAsc(budgetId, typeFilter);
+    }
+
+    private static Set<UUID> safeEditors(Budget b) {
+        return b.editorIds() == null ? Set.of() : b.editorIds();
+    }
+
+    private Budget withFund(Budget b, BigDecimal newFund) {
+        return new Budget(
+                b.id(),
+                b.name(),
+                b.description(),
+                newFund,
+                b.createdBy(),
+                b.editorIds(),
+                b.createdAt(),
+                Instant.now()
+        );
+    }
+
+    private BudgetWithBalance withBalance(Budget b) {
+        BigDecimal total = repository.totalPurchasesByBudgetIds(List.of(b.id()))
+                .getOrDefault(b.id(), BigDecimal.ZERO);
+        return new BudgetWithBalance(b, total);
     }
 }
