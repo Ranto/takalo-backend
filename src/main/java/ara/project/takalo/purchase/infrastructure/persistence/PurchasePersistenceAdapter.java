@@ -50,6 +50,14 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
     }
 
     @Override
+    public PagedResponse<Purchase> findByDateRangeAndOwner(Instant start, Instant end, UUID ownerId, int page, int size) {
+        var pageable = PageRequest.of(page, size);
+        var entityPage = purchaseRepository.findByDateRangeAndOwner(start, end, ownerId, pageable);
+
+        return PaginationMapper.toPagedResponse(entityPage, purchaseMapper::toDomain);
+    }
+
+    @Override
     public void deleteById(UUID purchaseId) {
         if (!purchaseRepository.existsById(purchaseId)) {
             throw new ResourceNotFoundException("Achat non trouvé");

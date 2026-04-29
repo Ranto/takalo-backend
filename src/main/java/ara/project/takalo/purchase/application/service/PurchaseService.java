@@ -7,8 +7,10 @@ import ara.project.takalo.purchase.domain.model.PurchaseItem;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,19 +26,26 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PurchaseService implements PurchaseServicePort {
 
+    private static final String PERM_READ_ANY = "PERM_purchase:read:any";
+
     private final PurchaseRepository repository;
     private final ProductServicePort productService;
+    private final CurrentUserProvider currentUserProvider;
 
     @Override
     public Purchase create(Purchase purchase) {
-        Purchase purchaseToSave = getPurchaseWithProductName(purchase);
+        Purchase withOwner = purchase.ownerId() == null
+                ? purchase.withOwner(currentUserProvider.id())
+                : purchase;
+        Purchase purchaseToSave = getPurchaseWithProductName(withOwner);
         return repository.save(purchaseToSave);
     }
 
     @Override
     public Purchase update(UUID id, Purchase purchase) {
         return repository.findById(id).map(existing -> {
-            Purchase purchaseToSave = getPurchaseWithProductName(purchase);
+            Purchase withOwner = purchase.withOwner(existing.ownerId());
+            Purchase purchaseToSave = getPurchaseWithProductName(withOwner);
             return repository.save(purchaseToSave);
         }).orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
     }
@@ -49,13 +58,22 @@ public class PurchaseService implements PurchaseServicePort {
     @Override
     @Transactional(readOnly = true)
     public Purchase getById(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
+        Purchase purchase = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
+        if (!currentUserProvider.hasAuthority(PERM_READ_ANY)
+                && !purchase.ownerId().equals(currentUserProvider.id())) {
+            throw new AccessDeniedException("Accès refusé à cet achat");
+        }
+        return purchase;
     }
 
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<Purchase> search(Instant start, Instant end, int page, int limit) {
-        return repository.findByDateRange(start, end, page, limit);
+        if (currentUserProvider.hasAuthority(PERM_READ_ANY)) {
+            return repository.findByDateRange(start, end, page, limit);
+        }
+        return repository.findByDateRangeAndOwner(start, end, currentUserProvider.id(), page, limit);
     }
 
     private @NonNull Purchase getPurchaseWithProductName(Purchase purchase) {
@@ -82,6 +100,7 @@ public class PurchaseService implements PurchaseServicePort {
 
         return new Purchase(
                 purchase.id(),
+                purchase.ownerId(),
                 purchase.purchaseDate(),
                 enrichedItems
         );

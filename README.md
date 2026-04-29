@@ -174,6 +174,13 @@ Dans le code, exprimer les contraintes par **permission** plutôt que par rôle 
 
 Les rôles sont également exposés en `ROLE_<name>` pour les cas où c'est plus parlant.
 
+#### Sémantique `:own` vs `:any` sur les achats
+
+Chaque achat porte un `owner_id` (l'utilisateur à qui il appartient — distinct des champs d'audit `created_by`/`modified_by`). Sur les endpoints `GET /api/v1/purchases/**`, la règle s'applique au niveau service :
+
+- `PERM_purchase:read:any` → accès à tous les achats.
+- `PERM_purchase:read:own` (sans `:any`) → ne voit que les achats dont `owner_id` correspond à l'utilisateur courant. La recherche paginée filtre automatiquement par owner ; un `GET /{id}` sur un achat tiers répond **403**.
+
 ### Endpoints publics
 
 `/v3/api-docs/**`, `/swagger-ui.html`, `/swagger-ui/**`, `/actuator/health`, `/actuator/info`. Tout le reste exige une authentification.

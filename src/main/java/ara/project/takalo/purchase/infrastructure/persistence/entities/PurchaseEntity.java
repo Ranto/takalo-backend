@@ -3,6 +3,7 @@ package ara.project.takalo.purchase.infrastructure.persistence.entities;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -15,6 +16,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -25,7 +31,8 @@ import java.util.UUID;
 @Table(
         name = "purchases",
         indexes = {
-                @Index(name = "idx_purchase_date", columnList = "purchase_date")
+                @Index(name = "idx_purchase_date", columnList = "purchase_date"),
+                @Index(name = "idx_purchases_owner", columnList = "owner_id")
         }
 )
 @Getter
@@ -33,6 +40,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class PurchaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -40,6 +48,25 @@ public class PurchaseEntity {
 
     @Column(nullable = false, name = "purchase_date")
     private Instant purchaseDate;
+
+    @Column(name = "owner_id", nullable = false)
+    private UUID ownerId;
+
+    @CreatedBy
+    @Column(name = "created_by", nullable = false, updatable = false)
+    private UUID createdBy;
+
+    @LastModifiedBy
+    @Column(name = "modified_by")
+    private UUID modifiedBy;
+
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @LastModifiedDate
+    @Column(name = "modified_at")
+    private Instant modifiedAt;
 
     @OneToMany(mappedBy = "purchase",
             cascade = CascadeType.ALL,

@@ -15,6 +15,7 @@ public class PurchaseWebMapper {
     public Purchase toDomain(PurchaseRequest request) {
         return new Purchase(
                 null,
+                null,
                 request.purchaseDate(),
                 request.items().stream().map(itemWebMapper::toDomain).toList()
         );

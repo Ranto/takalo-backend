@@ -71,7 +71,7 @@ class PurchaseMapperTest {
                 "Carrefour",
                 "Pain"
         );
-        Purchase domain = new Purchase(purchaseId, date, List.of(item));
+        Purchase domain = new Purchase(purchaseId, null, date, List.of(item));
 
         PurchaseEntity entity = mapper.toEntity(domain);
 
@@ -85,7 +85,7 @@ class PurchaseMapperTest {
 
     @Test
     void toEntity_withNullItems_skipsItemMapping() {
-        Purchase domain = new Purchase(UUID.randomUUID(), Instant.now(), null);
+        Purchase domain = new Purchase(UUID.randomUUID(), null, Instant.now(), null);
 
         PurchaseEntity entity = mapper.toEntity(domain);
 

@@ -59,6 +59,7 @@ public class PurchaseImportService implements PurchaseImportServicePort {
         for (Map.Entry<LocalDate, List<PurchaseItem>> entry : itemsByDate.entrySet()) {
             Purchase toCreate = new Purchase(
                     null,
+                    null,
                     entry.getKey().atStartOfDay(ZoneOffset.UTC).toInstant(),
                     entry.getValue()
             );

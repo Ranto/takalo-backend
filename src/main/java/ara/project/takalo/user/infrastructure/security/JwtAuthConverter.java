@@ -41,6 +41,15 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         for (String perm : user.permissionNames()) {
             authorities.add(new SimpleGrantedAuthority("PERM_" + perm));
         }
-        return new JwtAuthenticationToken(jwt, authorities, externalId);
+
+        AuthenticatedUser principal = new AuthenticatedUser(
+                user.id(), user.externalId(), user.email(), user.displayName());
+
+        return new JwtAuthenticationToken(jwt, authorities, principal.externalId()) {
+            @Override
+            public Object getPrincipal() {
+                return principal;
+            }
+        };
     }
 }

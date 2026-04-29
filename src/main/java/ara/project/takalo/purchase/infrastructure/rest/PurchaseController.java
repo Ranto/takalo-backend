@@ -100,6 +100,8 @@ public class PurchaseController {
     @Operation(summary = "Obtenir un achat par identifiant", description = "Renvoie l'achat complet avec ses articles.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Achat trouvé"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé (achat appartenant à un autre utilisateur)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Achat introuvable",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
@@ -110,9 +112,10 @@ public class PurchaseController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PERM_purchase:read:any')")
+    @PreAuthorize("hasAnyAuthority('PERM_purchase:read:own', 'PERM_purchase:read:any')")
     @Operation(summary = "Rechercher des achats",
-            description = "Recherche paginée par fenêtre temporelle (start/end optionnels).")
+            description = "Recherche paginée par fenêtre temporelle (start/end optionnels). " +
+                    "Les utilisateurs avec :read:own ne voient que leurs propres achats.")
     public PagedResponse<PurchaseLightResponse> search(
             @Parameter(description = "Date de début (ISO-8601, inclusif)")
             @RequestParam(required = false)
