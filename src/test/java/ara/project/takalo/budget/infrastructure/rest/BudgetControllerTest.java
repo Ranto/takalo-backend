@@ -3,6 +3,7 @@ package ara.project.takalo.budget.infrastructure.rest;
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
 import ara.project.takalo.budget.domain.model.Budget;
+import ara.project.takalo.budget.domain.model.BudgetEditor;
 import ara.project.takalo.budget.domain.model.BudgetMovement;
 import ara.project.takalo.budget.domain.model.BudgetMovementSource;
 import ara.project.takalo.budget.domain.model.BudgetMovementType;
@@ -10,6 +11,7 @@ import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.budget.infrastructure.rest.mapper.BudgetWebMapper;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
 import ara.project.takalo.shared.domain.exception.ForbiddenException;
+import ara.project.takalo.shared.domain.exception.InvalidOperationException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.user.application.port.in.UserServicePort;
@@ -251,6 +253,76 @@ class BudgetControllerTest {
                 .andExpect(jsonPath("$[0].type").value("CREDIT_EXTERNE"))
                 .andExpect(jsonPath("$[0].source").value("INCONNUE"))
                 .andExpect(jsonPath("$[0].montant").value(200.00));
+    }
+
+    // ------------------------------------------------------------------
+    // Gestion de la liste des éditeurs (S43, S46, S55)
+    // ------------------------------------------------------------------
+
+    @Test
+    void postEditor_returns200_withUpdatedEditorList() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        Budget updated = new Budget(id, "Courses", null, new BigDecimal("500.00"),
+                alice, Set.of(alice, bob), Instant.now(), null);
+        when(service.addEditor(org.mockito.ArgumentMatchers.eq(id), org.mockito.ArgumentMatchers.eq(bob)))
+                .thenReturn(new BudgetWithBalance(updated, BigDecimal.ZERO));
+
+        mockMvc.perform(post("/api/v1/budgets/{id}/editors", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"userId\": \"" + bob + "\" }"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.editorIds.length()").value(2));
+    }
+
+    @Test
+    void deleteEditor_returns200() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        Budget updated = new Budget(id, "Courses", null, new BigDecimal("500.00"),
+                alice, Set.of(alice), Instant.now(), null);
+        when(service.removeEditor(org.mockito.ArgumentMatchers.eq(id), org.mockito.ArgumentMatchers.eq(bob)))
+                .thenReturn(new BudgetWithBalance(updated, BigDecimal.ZERO));
+
+        mockMvc.perform(delete("/api/v1/budgets/{id}/editors/{userId}", id, bob))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.editorIds.length()").value(1))
+                .andExpect(jsonPath("$.editorIds[0]").value(alice.toString()));
+    }
+
+    @Test
+    void deleteEditor_creatorRemovingSelf_returns400() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        when(service.removeEditor(org.mockito.ArgumentMatchers.eq(id), org.mockito.ArgumentMatchers.eq(alice)))
+                .thenThrow(new InvalidOperationException(
+                        "Le créateur ne peut pas être retiré de la liste des éditeurs"));
+
+        mockMvc.perform(delete("/api/v1/budgets/{id}/editors/{userId}", id, alice))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Le créateur ne peut pas être retiré de la liste des éditeurs"));
+    }
+
+    @Test
+    void getEditors_returns200_listOfTwo() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        when(service.listEditors(id)).thenReturn(List.of(
+                new BudgetEditor(alice, "alice", true),
+                new BudgetEditor(bob, "bob", false)));
+
+        mockMvc.perform(get("/api/v1/budgets/{id}/editors", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].userId").value(alice.toString()))
+                .andExpect(jsonPath("$[0].displayName").value("alice"))
+                .andExpect(jsonPath("$[0].creator").value(true))
+                .andExpect(jsonPath("$[1].userId").value(bob.toString()))
+                .andExpect(jsonPath("$[1].creator").value(false));
     }
 
     @Test
