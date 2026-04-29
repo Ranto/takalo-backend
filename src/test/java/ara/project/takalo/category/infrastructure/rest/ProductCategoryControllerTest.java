@@ -5,6 +5,7 @@ import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryRequest;
 import ara.project.takalo.category.infrastructure.rest.mapper.ProductCategoryWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.user.application.port.in.UserServicePort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,6 +46,9 @@ class ProductCategoryControllerTest {
 
     @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
+
+    @MockitoBean
+    private UserServicePort userServicePort;
 
     @Test
     void create_returns201AndPassesDomainWithNullId() throws Exception {

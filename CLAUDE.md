@@ -75,4 +75,5 @@ The codebase follows **hexagonal (ports-and-adapters) architecture**, organized 
 - **Constructor injection via Lombok `@RequiredArgsConstructor`** on `final` fields. Don't introduce field injection or `@Autowired`.
 - **REST base path is `/api/v1/<resource>`** and controllers are plural-noun routed (`/categories`, `/products`, `/purchases`).
 - **User-facing error messages are in French** (e.g. `"Un produit avec ce nom existe déjà"`, `"Erreur d'intégrité des données…"`). Keep new messages in French to match.
+- **Commit messages follow Conventional Commits and are written in French** (e.g. `feat(user): ajout de la gestion…`, `fix(product): correction du calcul…`). Do **not** add a `Co-Authored-By` trailer or any other author mention in commit messages.
 - Tests are scaffolded but largely empty (`src/test/.../category/application/` exists with no files yet); `TakaloApplicationTests` is the only real test. Spring Boot's `*-test` starters (jpa-test, webmvc-test, flyway-test, actuator-test) are already on the test classpath when you add new ones.

@@ -9,6 +9,7 @@ import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseItemWebMap
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseLightWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.user.application.port.in.UserServicePort;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,9 @@ class PurchaseControllerTest {
     @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
+    @MockitoBean
+    private UserServicePort userServicePort;
+
     private static String validRequestJson(UUID productId, String purchaseDate) {
         return """
                 {
@@ -77,7 +81,7 @@ class PurchaseControllerTest {
         Instant purchaseDate = Instant.parse("2024-01-01T00:00:00Z");
         PurchaseItem savedItem = new PurchaseItem(productId, 2.0, new BigDecimal("10.00"),
                 new BigDecimal("1.00"), null, "Carrefour", "Lait");
-        Purchase saved = new Purchase(generated, purchaseDate, List.of(savedItem));
+        Purchase saved = new Purchase(generated, null, purchaseDate, List.of(savedItem));
 
         when(service.create(any(Purchase.class))).thenReturn(saved);
 
@@ -144,7 +148,7 @@ class PurchaseControllerTest {
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("4.00"),
                 BigDecimal.ZERO, null, null, "Pain");
-        Purchase domain = new Purchase(id, Instant.parse("2024-01-01T00:00:00Z"), List.of(item));
+        Purchase domain = new Purchase(id, null, Instant.parse("2024-01-01T00:00:00Z"), List.of(item));
 
         when(service.getById(id)).thenReturn(domain);
 
@@ -159,7 +163,7 @@ class PurchaseControllerTest {
     void update_returns200AndPassesPathId() throws Exception {
         UUID pathId = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
-        Purchase saved = new Purchase(pathId, Instant.parse("2024-01-01T00:00:00Z"), List.of(
+        Purchase saved = new Purchase(pathId, null, Instant.parse("2024-01-01T00:00:00Z"), List.of(
                 new PurchaseItem(productId, 2.0, new BigDecimal("10.00"), new BigDecimal("1.00"),
                         null, "Carrefour", "Lait")
         ));
@@ -199,7 +203,7 @@ class PurchaseControllerTest {
         Instant date = Instant.parse("2024-01-01T00:00:00Z");
         PurchaseItem item = new PurchaseItem(productId, 2.0, new BigDecimal("10.00"),
                 new BigDecimal("1.00"), null, null, "Lait");
-        Purchase domain = new Purchase(id, date, List.of(item));
+        Purchase domain = new Purchase(id, null, date, List.of(item));
         Instant start = Instant.parse("2024-01-01T00:00:00Z");
         Instant end = Instant.parse("2024-12-31T23:59:59Z");
         PagedResponse<Purchase> page = new PagedResponse<>(List.of(domain), 1, 5, 1L, 1, true);

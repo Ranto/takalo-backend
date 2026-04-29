@@ -16,6 +16,8 @@ public interface PurchaseRepository {
 
     PagedResponse<Purchase> findByDateRange(Instant start, Instant end, int page, int size);
 
+    PagedResponse<Purchase> findByDateRangeAndOwner(Instant start, Instant end, UUID ownerId, int page, int size);
+
     void deleteById(UUID purchaseId);
 
 }

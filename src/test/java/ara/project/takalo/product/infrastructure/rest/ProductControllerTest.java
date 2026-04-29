@@ -7,6 +7,7 @@ import ara.project.takalo.product.infrastructure.rest.dto.ProductRequest;
 import ara.project.takalo.product.infrastructure.rest.dto.ProductResponse;
 import ara.project.takalo.product.infrastructure.rest.mapper.ProductWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.user.application.port.in.UserServicePort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -48,6 +49,9 @@ class ProductControllerTest {
 
     @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
+
+    @MockitoBean
+    private UserServicePort userServicePort;
 
     @Test
     void create_returns201AndPassesMappedDomain() throws Exception {

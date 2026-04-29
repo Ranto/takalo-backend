@@ -32,4 +32,27 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
             @Param("endDate") Instant endDate,
             Pageable pageable
     );
+
+    @Query(
+            value = """
+        SELECT p FROM PurchaseEntity p
+        WHERE p.ownerId = :ownerId
+          AND (:startDate IS NULL OR p.purchaseDate >= :startDate)
+          AND (:endDate IS NULL OR p.purchaseDate <= :endDate)
+        ORDER BY p.purchaseDate DESC
+        """,
+            countQuery = """
+        SELECT COUNT(p) FROM PurchaseEntity p
+        WHERE p.ownerId = :ownerId
+          AND (:startDate IS NULL OR p.purchaseDate >= :startDate)
+          AND (:endDate IS NULL OR p.purchaseDate <= :endDate)
+        """
+    )
+    @EntityGraph(attributePaths = "items")
+    Page<PurchaseEntity> findByDateRangeAndOwner(
+            @Param("startDate") Instant startDate,
+            @Param("endDate") Instant endDate,
+            @Param("ownerId") UUID ownerId,
+            Pageable pageable
+    );
 }

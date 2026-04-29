@@ -13,10 +13,12 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +35,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/categories")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearer-jwt")
 @Tag(name = "Catégories", description = "Gestion des catégories de produits")
 public class ProductCategoryController {
     private final ProductCategoryServicePort service;
@@ -40,6 +43,7 @@ public class ProductCategoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('PERM_category:manage')")
     @Operation(summary = "Créer une catégorie", description = "Crée une nouvelle catégorie de produit.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Catégorie créée"),
@@ -54,6 +58,7 @@ public class ProductCategoryController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_category:read')")
     @Operation(summary = "Obtenir une catégorie par identifiant")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Catégorie trouvée"),
@@ -66,6 +71,7 @@ public class ProductCategoryController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_category:read')")
     @Operation(summary = "Rechercher des catégories",
             description = "Recherche paginée des catégories par libellé (filtre optionnel).")
     public PagedResponse<ProductCategoryResponse> search(
@@ -76,6 +82,7 @@ public class ProductCategoryController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_category:manage')")
     @Operation(summary = "Mettre à jour une catégorie")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Catégorie mise à jour"),
@@ -95,6 +102,7 @@ public class ProductCategoryController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('PERM_category:manage')")
     @Operation(summary = "Supprimer une catégorie")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Catégorie supprimée"),
