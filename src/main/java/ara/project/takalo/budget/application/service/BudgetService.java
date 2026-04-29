@@ -2,8 +2,11 @@ package ara.project.takalo.budget.application.service;
 
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
+import ara.project.takalo.budget.application.port.out.BudgetMovementRepository;
 import ara.project.takalo.budget.application.port.out.BudgetRepository;
 import ara.project.takalo.budget.domain.model.Budget;
+import ara.project.takalo.budget.domain.model.BudgetMovement;
+import ara.project.takalo.budget.domain.model.BudgetMovementType;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.shared.domain.exception.AlreadyExistsException;
 import ara.project.takalo.shared.domain.exception.ForbiddenException;
@@ -29,6 +32,7 @@ import java.util.UUID;
 public class BudgetService implements BudgetServicePort {
 
     private final BudgetRepository repository;
+    private final BudgetMovementRepository movementRepository;
     private final CurrentUserProvider currentUserProvider;
 
     @Override
@@ -108,5 +112,51 @@ public class BudgetService implements BudgetServicePort {
         BigDecimal total = repository.totalPurchasesByBudgetIds(List.of(saved.id()))
                 .getOrDefault(saved.id(), BigDecimal.ZERO);
         return new BudgetWithBalance(saved, total);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Budget getRawById(UUID id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
+    }
+
+    @Override
+    public void recordPurchaseAssignment(UUID budgetId, UUID purchaseId, BigDecimal amount,
+                                         Instant date, String reason, UUID correlationId) {
+        recordPurchaseMovement(BudgetMovementType.ASSIGNATION_ACHAT, budgetId, purchaseId,
+                amount, date, reason, correlationId);
+    }
+
+    @Override
+    public void recordPurchaseUnassignment(UUID budgetId, UUID purchaseId, BigDecimal amount,
+                                           Instant date, String reason, UUID correlationId) {
+        recordPurchaseMovement(BudgetMovementType.DESASSIGNATION_ACHAT, budgetId, purchaseId,
+                amount, date, reason, correlationId);
+    }
+
+    private void recordPurchaseMovement(BudgetMovementType type, UUID budgetId, UUID purchaseId,
+                                        BigDecimal amount, Instant date, String reason, UUID correlationId) {
+        Budget budget = repository.findById(budgetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Budget non trouvé"));
+        UUID currentUserId = currentUserProvider.id();
+        Set<UUID> editorIds = budget.editorIds() == null ? Set.of() : budget.editorIds();
+        if (!editorIds.contains(currentUserId)) {
+            throw new ForbiddenException("Vous n'êtes pas autorisé à modifier ce budget");
+        }
+        BigDecimal signed = type == BudgetMovementType.ASSIGNATION_ACHAT ? amount.negate() : amount;
+        BudgetMovement movement = new BudgetMovement(
+                null,
+                budgetId,
+                type,
+                signed,
+                date,
+                reason,
+                correlationId,
+                purchaseId,
+                null,
+                null
+        );
+        movementRepository.save(movement);
     }
 }

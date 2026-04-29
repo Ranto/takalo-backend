@@ -16,6 +16,7 @@ public class PurchaseWebMapper {
         return new Purchase(
                 null,
                 null,
+                request.budgetId(),
                 request.purchaseDate(),
                 request.items().stream().map(itemWebMapper::toDomain).toList()
         );
@@ -23,6 +24,7 @@ public class PurchaseWebMapper {
 
     public PurchaseResponse toResponse(Purchase purchase) {
         return new PurchaseResponse(purchase.id(),
+                purchase.budgetId(),
                 purchase.purchaseDate(),
                 purchase.items().stream().map(itemWebMapper::toResponse).toList(),
                 purchase.getTotalAmount());

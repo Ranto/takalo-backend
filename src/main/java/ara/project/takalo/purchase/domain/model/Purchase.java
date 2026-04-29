@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record Purchase(UUID id,
                        UUID ownerId,
+                       UUID budgetId,
                        Instant purchaseDate,
                        List<PurchaseItem> items) {
     public BigDecimal getTotalAmount() {
@@ -16,6 +17,10 @@ public record Purchase(UUID id,
     }
 
     public Purchase withOwner(UUID newOwnerId) {
-        return new Purchase(id, newOwnerId, purchaseDate, items);
+        return new Purchase(id, newOwnerId, budgetId, purchaseDate, items);
+    }
+
+    public Purchase withBudget(UUID newBudgetId) {
+        return new Purchase(id, ownerId, newBudgetId, purchaseDate, items);
     }
 }

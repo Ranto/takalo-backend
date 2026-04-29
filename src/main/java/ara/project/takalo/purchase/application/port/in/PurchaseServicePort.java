@@ -16,4 +16,6 @@ public interface PurchaseServicePort {
     Purchase getById(UUID id);
 
     PagedResponse<Purchase> search(Instant start, Instant end, int page, int limit);
+
+    Purchase reassignBudget(UUID purchaseId, UUID newBudgetId, Instant date, String raison);
 }

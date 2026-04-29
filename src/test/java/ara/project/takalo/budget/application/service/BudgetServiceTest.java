@@ -1,5 +1,6 @@
 package ara.project.takalo.budget.application.service;
 
+import ara.project.takalo.budget.application.port.out.BudgetMovementRepository;
 import ara.project.takalo.budget.application.port.out.BudgetRepository;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
@@ -34,6 +35,9 @@ class BudgetServiceTest {
 
     @Mock
     private BudgetRepository repository;
+
+    @Mock
+    private BudgetMovementRepository movementRepository;
 
     @Mock
     private CurrentUserProvider currentUserProvider;

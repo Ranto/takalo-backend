@@ -16,6 +16,7 @@ public class PurchaseMapper {
         return new Purchase(
                 entity.getId(),
                 entity.getOwnerId(),
+                entity.getBudgetId(),
                 entity.getPurchaseDate(),
                 entity.getItems().stream().map(purchaseItemMapper::toDomain).toList()
         );
@@ -26,6 +27,7 @@ public class PurchaseMapper {
         PurchaseEntity entity = PurchaseEntity.builder()
                 .id(domain.id())
                 .ownerId(domain.ownerId())
+                .budgetId(domain.budgetId())
                 .purchaseDate(domain.purchaseDate())
                 .build();
 

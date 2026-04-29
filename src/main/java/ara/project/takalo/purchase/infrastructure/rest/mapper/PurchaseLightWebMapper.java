@@ -10,6 +10,7 @@ public class PurchaseLightWebMapper {
     public PurchaseLightResponse toResponse(Purchase domain) {
         return new PurchaseLightResponse(
                 domain.id(),
+                domain.budgetId(),
                 domain.purchaseDate(),
                 domain.items().size(),
                 domain.getTotalAmount()

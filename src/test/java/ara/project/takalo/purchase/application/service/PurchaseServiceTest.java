@@ -1,5 +1,6 @@
 package ara.project.takalo.purchase.application.service;
 
+import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.domain.model.Purchase;
@@ -40,6 +41,9 @@ class PurchaseServiceTest {
     private ProductServicePort productService;
 
     @Mock
+    private BudgetServicePort budgetService;
+
+    @Mock
     private CurrentUserProvider currentUserProvider;
 
     @InjectMocks
@@ -52,8 +56,8 @@ class PurchaseServiceTest {
         UUID productId2 = UUID.randomUUID();
         PurchaseItem item1 = new PurchaseItem(productId1, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
         PurchaseItem item2 = new PurchaseItem(productId2, 2.0, new BigDecimal("4.00"), BigDecimal.ZERO, null, null, null);
-        Purchase input = new Purchase(null, null, Instant.parse("2024-01-01T00:00:00Z"), List.of(item1, item2));
-        Purchase saved = new Purchase(UUID.randomUUID(), currentUser, input.purchaseDate(), List.of());
+        Purchase input = new Purchase(null, null, null, Instant.parse("2024-01-01T00:00:00Z"), List.of(item1, item2));
+        Purchase saved = new Purchase(UUID.randomUUID(), currentUser, null, input.purchaseDate(), List.of());
 
         when(currentUserProvider.id()).thenReturn(currentUser);
         when(productService.getProductNames(Set.of(productId1, productId2)))
@@ -77,7 +81,7 @@ class PurchaseServiceTest {
     void create_whenProductNameMissing_usesFallback() {
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
-        Purchase input = new Purchase(null, null, Instant.now(), List.of(item));
+        Purchase input = new Purchase(null, null, null, Instant.now(), List.of(item));
 
         when(currentUserProvider.id()).thenReturn(UUID.randomUUID());
         when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of());
@@ -94,9 +98,9 @@ class PurchaseServiceTest {
         UUID owner = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
-        Purchase existing = new Purchase(id, owner, Instant.parse("2024-01-01T00:00:00Z"), List.of());
-        Purchase body = new Purchase(null, null, Instant.parse("2024-02-01T00:00:00Z"), List.of(item));
-        Purchase saved = new Purchase(id, owner, body.purchaseDate(), List.of());
+        Purchase existing = new Purchase(id, owner, null, Instant.parse("2024-01-01T00:00:00Z"), List.of());
+        Purchase body = new Purchase(null, null, null, Instant.parse("2024-02-01T00:00:00Z"), List.of(item));
+        Purchase saved = new Purchase(id, owner, null, body.purchaseDate(), List.of());
 
         when(repository.findById(id)).thenReturn(Optional.of(existing));
         when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of(productId, "Lait"));
@@ -114,7 +118,7 @@ class PurchaseServiceTest {
     @Test
     void update_whenNotFound_throwsResourceNotFound() {
         UUID id = UUID.randomUUID();
-        Purchase body = new Purchase(null, null, Instant.now(), List.of());
+        Purchase body = new Purchase(null, null, null, Instant.now(), List.of());
 
         when(repository.findById(id)).thenReturn(Optional.empty());
 
@@ -126,8 +130,12 @@ class PurchaseServiceTest {
     }
 
     @Test
-    void delete_delegatesToRepository() {
+    void delete_whenOwner_delegatesToRepository() {
         UUID id = UUID.randomUUID();
+        UUID owner = UUID.randomUUID();
+        Purchase existing = new Purchase(id, owner, null, Instant.now(), List.of());
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        when(currentUserProvider.id()).thenReturn(owner);
 
         service.delete(id);
 
@@ -138,7 +146,7 @@ class PurchaseServiceTest {
     void getById_whenOwnerWithReadOwn_returnsDomain() {
         UUID id = UUID.randomUUID();
         UUID currentUser = UUID.randomUUID();
-        Purchase found = new Purchase(id, currentUser, Instant.now(), List.of());
+        Purchase found = new Purchase(id, currentUser, null, Instant.now(), List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(false);
         when(currentUserProvider.id()).thenReturn(currentUser);
@@ -153,7 +161,7 @@ class PurchaseServiceTest {
         UUID id = UUID.randomUUID();
         UUID owner = UUID.randomUUID();
         UUID other = UUID.randomUUID();
-        Purchase found = new Purchase(id, owner, Instant.now(), List.of());
+        Purchase found = new Purchase(id, owner, null, Instant.now(), List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(false);
         when(currentUserProvider.id()).thenReturn(other);
@@ -165,7 +173,7 @@ class PurchaseServiceTest {
     @Test
     void getById_whenReadAny_returnsRegardlessOfOwner() {
         UUID id = UUID.randomUUID();
-        Purchase found = new Purchase(id, UUID.randomUUID(), Instant.now(), List.of());
+        Purchase found = new Purchase(id, UUID.randomUUID(), null, Instant.now(), List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(true);
 

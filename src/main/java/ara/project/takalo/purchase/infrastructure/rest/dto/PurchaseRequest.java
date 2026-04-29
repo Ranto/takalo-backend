@@ -8,6 +8,7 @@ import jakarta.validation.constraints.PastOrPresent;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Schema(description = "Données d'entrée pour la création ou la mise à jour d'un achat")
 public record PurchaseRequest(
@@ -16,6 +17,9 @@ public record PurchaseRequest(
         @NotNull(message = "La date d'achat est obligatoire.")
         @PastOrPresent(message = "La date d'achat ne peut pas être dans le futur")
         Instant purchaseDate,
+
+        @Schema(description = "Identifiant du budget à imputer (optionnel)")
+        UUID budgetId,
 
         @Schema(description = "Articles de l'achat", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotEmpty(message = "L'achat doit contenir au moins un article.")
