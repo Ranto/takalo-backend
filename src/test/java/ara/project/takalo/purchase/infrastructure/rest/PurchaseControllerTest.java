@@ -9,6 +9,8 @@ import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseItemWebMap
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseLightWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
+import ara.project.takalo.user.application.port.in.UserDefaultBudgetServicePort;
 import ara.project.takalo.user.application.port.in.UserServicePort;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -54,6 +56,12 @@ class PurchaseControllerTest {
 
     @MockitoBean
     private UserServicePort userServicePort;
+
+    @MockitoBean
+    private UserDefaultBudgetServicePort defaultBudgetService;
+
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
 
     private static String validRequestJson(UUID productId, String purchaseDate) {
         return """

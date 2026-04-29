@@ -2,6 +2,9 @@ package ara.project.takalo.purchase.infrastructure.rest;
 
 import ara.project.takalo.purchase.application.port.in.PurchaseImportServicePort;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
+import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
+import ara.project.takalo.user.application.port.in.UserDefaultBudgetServicePort;
+import org.openapitools.jackson.nullable.JsonNullable;
 import ara.project.takalo.purchase.domain.exception.UnsupportedImportFormatException;
 import ara.project.takalo.purchase.domain.model.ImportFormat;
 import ara.project.takalo.purchase.domain.model.Purchase;
@@ -61,6 +64,8 @@ public class PurchaseController {
     private final PurchaseWebMapper purchaseWebMapper;
     private final PurchaseLightWebMapper purchaseLightWebMapper;
     private final PurchaseImportWebMapper purchaseImportWebMapper;
+    private final UserDefaultBudgetServicePort defaultBudgetService;
+    private final CurrentUserProvider currentUserProvider;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -74,7 +79,16 @@ public class PurchaseController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public PurchaseResponse create(@Valid @RequestBody PurchaseRequest request) {
-        Purchase purchase = purchaseWebMapper.toDomain(request);
+        UUID effectiveBudgetId;
+        JsonNullable<UUID> requested = request.budgetId();
+        if (requested == null || !requested.isPresent()) {
+            effectiveBudgetId = defaultBudgetService
+                    .resolveDefaultBudgetIdFor(currentUserProvider.id())
+                    .orElse(null);
+        } else {
+            effectiveBudgetId = requested.get();
+        }
+        Purchase purchase = purchaseWebMapper.toDomain(request, effectiveBudgetId);
         Purchase saved = service.create(purchase);
         return purchaseWebMapper.toResponse(saved);
     }

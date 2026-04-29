@@ -23,6 +23,7 @@ import ara.project.takalo.shared.domain.exception.InvalidOperationException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
+import ara.project.takalo.user.application.port.in.UserDefaultBudgetServicePort;
 import ara.project.takalo.user.application.port.in.UserServicePort;
 import ara.project.takalo.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +53,8 @@ public class BudgetService implements BudgetServicePort {
     private final BudgetMovementRepository movementRepository;
     private final CurrentUserProvider currentUserProvider;
     private final UserServicePort userService;
+    @Lazy
+    private final UserDefaultBudgetServicePort defaultBudgetService;
     @Lazy
     private final PurchaseServicePort purchaseService;
 
@@ -319,6 +322,7 @@ public class BudgetService implements BudgetServicePort {
             throw new ResourceNotFoundException("L'utilisateur n'est pas éditeur de ce budget");
         }
         Budget saved = repository.save(withEditors(budget, editors));
+        defaultBudgetService.clearForUserIfBudgetMatches(userId, budgetId);
         return withBalance(saved);
     }
 
