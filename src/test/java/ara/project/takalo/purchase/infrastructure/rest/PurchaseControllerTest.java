@@ -9,6 +9,7 @@ import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseItemWebMap
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseLightWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.user.application.port.in.UserServicePort;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,9 @@ class PurchaseControllerTest {
 
     @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
+
+    @MockitoBean
+    private UserServicePort userServicePort;
 
     private static String validRequestJson(UUID productId, String purchaseDate) {
         return """
