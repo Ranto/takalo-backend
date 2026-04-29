@@ -26,7 +26,16 @@ public class BudgetPersistenceAdapter implements BudgetRepository {
 
     @Override
     public Budget save(Budget budget) {
-        BudgetEntity entity = mapper.toEntity(budget);
+        BudgetEntity entity;
+        if (budget.id() != null) {
+            entity = jpaRepository.findById(budget.id())
+                    .orElseGet(() -> mapper.toEntity(budget));
+            entity.setName(budget.name());
+            entity.setDescription(budget.description());
+            entity.setInitialFund(budget.initialFund());
+        } else {
+            entity = mapper.toEntity(budget);
+        }
         BudgetEntity saved = jpaRepository.save(entity);
         return mapper.toDomain(saved);
     }

@@ -6,6 +6,7 @@ import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetLightResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetUpdateRequest;
 import ara.project.takalo.budget.infrastructure.rest.mapper.BudgetWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.shared.infrastructure.rest.dto.ErrorResponse;
@@ -25,6 +26,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -74,6 +76,28 @@ public class BudgetController {
             @Parameter(description = "Identifiant du budget") @PathVariable UUID id) {
         BudgetWithBalance bwb = service.getById(id);
         return ResponseEntity.ok(mapper.toResponse(bwb));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_budget:write')")
+    @Operation(summary = "Mettre à jour un budget",
+            description = "Met à jour le nom et/ou la description d'un budget. Le fond initial ne peut pas être modifié.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Budget mis à jour"),
+            @ApiResponse(responseCode = "400", description = "Opération invalide ou données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Utilisateur non éditeur du budget",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Budget introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Un budget avec ce nom existe déjà",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public BudgetResponse update(
+            @Parameter(description = "Identifiant du budget") @PathVariable UUID id,
+            @Valid @RequestBody BudgetUpdateRequest request) {
+        BudgetWithBalance updated = service.update(id, mapper.toCommand(request));
+        return mapper.toResponse(updated);
     }
 
     @GetMapping

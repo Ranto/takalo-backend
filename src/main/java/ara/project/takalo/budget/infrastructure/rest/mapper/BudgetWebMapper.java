@@ -1,14 +1,17 @@
 package ara.project.takalo.budget.infrastructure.rest.mapper;
 
+import ara.project.takalo.budget.application.port.in.BudgetUpdateCommand;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.budget.domain.model.BudgetWithBalance;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetLightResponse;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetRequest;
 import ara.project.takalo.budget.infrastructure.rest.dto.BudgetResponse;
+import ara.project.takalo.budget.infrastructure.rest.dto.BudgetUpdateRequest;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 
 @Component
 public class BudgetWebMapper {
@@ -23,6 +26,14 @@ public class BudgetWebMapper {
                 null,
                 null,
                 null
+        );
+    }
+
+    public BudgetUpdateCommand toCommand(BudgetUpdateRequest request) {
+        return new BudgetUpdateCommand(
+                request.name(),
+                request.description(),
+                Optional.ofNullable(request.fond())
         );
     }
 

@@ -12,4 +12,6 @@ public interface BudgetServicePort {
     BudgetWithBalance getById(UUID id);
 
     PagedResponse<BudgetWithBalance> findAll(int page, int size);
+
+    BudgetWithBalance update(UUID id, BudgetUpdateCommand command);
 }
