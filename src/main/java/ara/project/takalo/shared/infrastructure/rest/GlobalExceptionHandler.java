@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -93,6 +95,38 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 ex.getMessage(),
+                LocalDateTime.now(),
+                request.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ApiResponse(
+            responseCode = "401",
+            description = "Authentification requise",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+    )
+    public ErrorResponse handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
+        return new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Authentification requise",
+                LocalDateTime.now(),
+                request.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ApiResponse(
+            responseCode = "403",
+            description = "Permission insuffisante",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+    )
+    public ErrorResponse handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "Permission insuffisante",
                 LocalDateTime.now(),
                 request.getRequestURI()
         );

@@ -13,11 +13,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +37,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearer-jwt")
 @Tag(name = "Produits", description = "Gestion des produits")
 public class ProductController {
 
@@ -42,6 +45,7 @@ public class ProductController {
     private final ProductWebMapper webMapper;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PERM_product:write')")
     @Operation(summary = "Créer un produit")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Produit créé"),
@@ -57,6 +61,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_product:read')")
     @Operation(summary = "Obtenir un produit par identifiant")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Produit trouvé"),
@@ -69,6 +74,7 @@ public class ProductController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_product:read')")
     @Operation(summary = "Lister tous les produits", description = "Liste paginée de l'ensemble des produits.")
     public ResponseEntity<PagedResponse<ProductResponse>> findAll(
             @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
@@ -80,6 +86,7 @@ public class ProductController {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasAuthority('PERM_product:read')")
     @Operation(summary = "Rechercher des produits",
             description = "Recherche paginée par nom partiel et/ou liste de catégories.")
     public ResponseEntity<PagedResponse<ProductResponse>> search(
@@ -94,6 +101,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_product:write')")
     @Operation(summary = "Mettre à jour un produit")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Produit mis à jour"),
@@ -116,6 +124,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('PERM_product:write')")
     @Operation(summary = "Supprimer un produit")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Produit supprimé"),

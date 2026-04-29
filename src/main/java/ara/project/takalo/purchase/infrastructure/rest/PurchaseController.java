@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,6 +50,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/purchases")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearer-jwt")
 @Tag(name = "Achats", description = "Gestion des achats et de leurs articles")
 public class PurchaseController {
 
@@ -59,6 +62,7 @@ public class PurchaseController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('PERM_purchase:create')")
     @Operation(summary = "Créer un achat", description = "Crée un nouvel achat avec ses articles.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Achat créé"),
@@ -74,6 +78,7 @@ public class PurchaseController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERM_purchase:read:any')")
     @Operation(summary = "Mettre à jour un achat")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Achat mis à jour"),
@@ -91,6 +96,7 @@ public class PurchaseController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('PERM_purchase:read:own', 'PERM_purchase:read:any')")
     @Operation(summary = "Obtenir un achat par identifiant", description = "Renvoie l'achat complet avec ses articles.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Achat trouvé"),
@@ -104,6 +110,7 @@ public class PurchaseController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_purchase:read:any')")
     @Operation(summary = "Rechercher des achats",
             description = "Recherche paginée par fenêtre temporelle (start/end optionnels).")
     public PagedResponse<PurchaseLightResponse> search(
@@ -123,6 +130,7 @@ public class PurchaseController {
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('PERM_purchase:import')")
     @Operation(summary = "Importer des achats depuis un fichier",
             description = "Importe des achats depuis un fichier .xlsx, .docx ou .csv. Le format est détecté à partir de l'extension.")
     @ApiResponses({

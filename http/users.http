@@ -1,0 +1,22 @@
+### Récupérer un access token Keycloak (password grant)
+POST http://localhost:8081/realms/takalo/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type = password &
+client_id = takalo-backend &
+username = admin &
+password = adminadmin
+
+> {%
+    client.global.set("access_token", response.body.access_token);
+    client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Diagnostic : OIDC discovery (à utiliser si la requête ci-dessus échoue)
+GET http://localhost:8081/realms/takalo/.well-known/openid-configuration
+
+### Mon profil
+GET http://localhost:8080/api/v1/users/me
+Authorization: Bearer {{access_token}}
+
+
