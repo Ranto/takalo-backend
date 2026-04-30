@@ -1,5 +1,6 @@
 package ara.project.takalo.user.application.service;
 
+import ara.project.takalo.shared.domain.exception.InvalidOperationException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.user.application.port.in.UserServicePort;
 import ara.project.takalo.user.application.port.out.RoleRepository;
@@ -87,6 +88,11 @@ public class UserService implements UserServicePort {
     public User revokeRole(UUID userId, String roleName) {
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException("Rôle introuvable: " + roleName));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable avec id: " + userId));
+        if (user.roles().stream().anyMatch(r -> r.id().equals(role.id())) && user.roles().size() <= 1) {
+            throw new InvalidOperationException("Un utilisateur doit conserver au moins un rôle");
+        }
         return userRepository.removeRole(userId, role.id());
     }
 }
