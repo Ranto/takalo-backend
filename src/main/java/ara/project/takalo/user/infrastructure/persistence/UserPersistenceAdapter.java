@@ -1,6 +1,8 @@
 package ara.project.takalo.user.infrastructure.persistence;
 
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
+import ara.project.takalo.shared.domain.utility.PagedResponse;
+import ara.project.takalo.shared.infrastructure.utility.PaginationMapper;
 import ara.project.takalo.user.application.port.out.UserRepository;
 import ara.project.takalo.user.domain.model.Role;
 import ara.project.takalo.user.domain.model.User;
@@ -8,6 +10,8 @@ import ara.project.takalo.user.infrastructure.persistence.entities.RoleEntity;
 import ara.project.takalo.user.infrastructure.persistence.entities.UserEntity;
 import ara.project.takalo.user.infrastructure.persistence.mappers.UserMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashSet;
@@ -63,6 +67,13 @@ public class UserPersistenceAdapter implements UserRepository {
     @Override
     public Optional<User> findByEmail(String email) {
         return jpaUserRepository.findByEmail(email).map(userMapper::toDomain);
+    }
+
+    @Override
+    public PagedResponse<User> search(String query, int page, int size) {
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "email"));
+        var entityPage = jpaUserRepository.search(query, pageable);
+        return PaginationMapper.toPagedResponse(entityPage, userMapper::toDomain);
     }
 
     @Override

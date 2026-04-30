@@ -1,5 +1,6 @@
 package ara.project.takalo.user.infrastructure.rest;
 
+import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.user.application.port.in.UserServicePort;
 import ara.project.takalo.user.infrastructure.rest.dto.AssignRoleRequest;
 import ara.project.takalo.user.infrastructure.rest.dto.UserResponse;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -39,6 +41,18 @@ public class UserController {
     public ResponseEntity<UserResponse> me(@AuthenticationPrincipal AuthenticatedUser principal) {
         var user = userServicePort.getByExternalId(principal.externalId());
         return ResponseEntity.ok(webMapper.toResponse(user));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAuthority('PERM_user:manage')")
+    @Operation(summary = "Lister les utilisateurs",
+            description = "Liste paginée filtrable par email ou nom d'affichage.")
+    public ResponseEntity<PagedResponse<UserResponse>> search(
+            @Parameter(description = "Filtre partiel sur l'email ou le nom d'affichage") @RequestParam(required = false, name = "q") String query,
+            @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
+        var pagedDomain = userServicePort.search(query, page, size);
+        return ResponseEntity.ok(webMapper.toResponses(pagedDomain));
     }
 
     @GetMapping("/{id}")

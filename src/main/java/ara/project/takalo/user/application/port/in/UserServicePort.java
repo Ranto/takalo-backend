@@ -1,5 +1,6 @@
 package ara.project.takalo.user.application.port.in;
 
+import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.user.domain.model.User;
 
 import java.util.Optional;
@@ -14,6 +15,8 @@ public interface UserServicePort {
     Optional<User> findByExternalId(String externalId);
 
     User provision(String externalId, String email, String displayName);
+
+    PagedResponse<User> search(String query, int page, int size);
 
     User assignRole(UUID userId, String roleName);
 

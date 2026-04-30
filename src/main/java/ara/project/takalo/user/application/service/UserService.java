@@ -2,6 +2,7 @@ package ara.project.takalo.user.application.service;
 
 import ara.project.takalo.shared.domain.exception.InvalidOperationException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
+import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.user.application.port.in.UserServicePort;
 import ara.project.takalo.user.application.port.out.RoleRepository;
 import ara.project.takalo.user.application.port.out.UserRepository;
@@ -75,6 +76,13 @@ public class UserService implements UserServicePort {
                 null,
                 null);
         return userRepository.save(toCreate);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public PagedResponse<User> search(String query, int page, int size) {
+        String normalized = (query == null || query.isBlank()) ? null : query.trim();
+        return userRepository.search(normalized, page, size);
     }
 
     @Override

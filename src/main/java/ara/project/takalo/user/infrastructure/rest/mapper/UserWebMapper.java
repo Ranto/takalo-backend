@@ -1,5 +1,6 @@
 package ara.project.takalo.user.infrastructure.rest.mapper;
 
+import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.user.domain.model.Permission;
 import ara.project.takalo.user.domain.model.Role;
 import ara.project.takalo.user.domain.model.User;
@@ -23,6 +24,10 @@ public class UserWebMapper {
                 user.createdAt(),
                 user.updatedAt()
         );
+    }
+
+    public PagedResponse<UserResponse> toResponses(PagedResponse<User> page) {
+        return page.map(this::toResponse);
     }
 
     public RoleResponse toResponse(Role role) {
