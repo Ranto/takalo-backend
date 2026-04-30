@@ -45,12 +45,19 @@ docker compose up -d
 
 1. Aller sur http://localhost:8081 → se connecter avec `admin` / `admin`.
 2. Créer un realm `takalo` (menu déroulant en haut à gauche → **Create realm**).
-3. Créer un client :
-   - Client ID : `takalo-backend`
+3. Créer **un seul client** pour le frontend Angular (le backend n'en a pas besoin — voir encadré ci-dessous) :
+   - Client ID : `takalo-frontend`
    - Client type : **OpenID Connect**
-   - Client authentication : **Off** (client public, pour test local)
-   - Valid redirect URIs : `http://localhost:*` (à restreindre en prod)
-   - Web origins : `*` (à restreindre en prod)
+   - Client authentication : **Off** (client public, SPA — pas de secret côté navigateur)
+   - Standard flow : **On** (Authorization Code + PKCE)
+   - Direct access grants : **Off** (à activer uniquement pour tester en password grant via `curl`, cf. §2.6)
+   - Valid redirect URIs :
+     - `http://localhost:4200/auth/callback`
+     - `http://localhost:4200/silent-refresh.html`
+   - Valid post logout redirect URIs : `http://localhost:4200/`
+   - Web origins : `http://localhost:4200` (ou `+` pour reprendre les redirect URIs)
+
+   > ℹ️ **Pourquoi pas de client `takalo-backend` ?** Le backend Spring est un *Resource Server* OAuth2 : il ne fait que **valider** les JWT reçus en `Authorization: Bearer …` (via les clés publiques téléchargées depuis `KEYCLOAK_ISSUER_URI`). Il n'initie aucun flux de login et ne s'enregistre donc pas comme client Keycloak. Un seul client (`takalo-frontend`) suffit pour toute l'application.
 4. (Optionnel) Activer l'auto-inscription par email + mot de passe :
    - **Realm Settings** → onglet **Login** → activer **User registration** (et **Forgot password**, **Remember me** si souhaité).
    - Un lien *Register* apparaîtra alors sur la page de login Keycloak.
@@ -83,17 +90,49 @@ WHERE u.email = 'admin@example.com'   -- email du user Keycloak
 
 (Une fois ce premier admin posé, les suivants peuvent être gérés via `POST /api/v1/users/{id}/roles`.)
 
-### 2.6 Obtenir un access token
+### 2.6 Obtenir un access token (test CLI)
+
+Pratique pour tester l'API avec `curl` / Postman / Swagger UI sans passer par le navigateur. Pré-requis : activer **Direct access grants** sur le client `takalo-frontend` dans Keycloak.
 
 ```bash
 curl -X POST "http://localhost:8081/realms/takalo/protocol/openid-connect/token" \
   -d "grant_type=password" \
-  -d "client_id=takalo-backend" \
+  -d "client_id=takalo-frontend" \
   -d "username=<user>" \
   -d "password=<password>"
 ```
 
 Utiliser le `access_token` dans l'en-tête `Authorization: Bearer <token>` ou via le bouton **Authorize** de Swagger UI.
+
+> ⚠️ Le grant `password` est déconseillé en production (OAuth 2.1) ; il n'est utile qu'en dev. Le frontend, lui, utilise systématiquement Authorization Code + PKCE.
+
+### 2.7 Thème de login Takalo
+
+Un thème Keycloak personnalisé (couleurs et logo Takalo) est fourni dans `keycloak-themes/takalo/`. Il est monté automatiquement par `docker-compose.yml` sur `/opt/keycloak/themes` ; le cache de thèmes est désactivé en mode `start-dev` pour rafraîchir les modifications sans redémarrer le conteneur.
+
+Activer le thème (à faire une seule fois) :
+
+1. http://localhost:8081 → admin → realm `takalo` → **Realm Settings** → onglet **Themes**.
+2. **Login theme** = `takalo` → **Save**.
+
+Structure du thème :
+
+```
+keycloak-themes/takalo/login/
+├── theme.properties              # hérite du thème keycloak, charge takalo.css
+└── resources/
+    ├── css/takalo.css            # palette Takalo (navy + jaune), inputs, boutons
+    └── img/logo.svg              # logo affiché dans le header
+```
+
+Personnalisations courantes :
+
+- **Logo** : remplacer `resources/img/logo.svg` (PNG/SVG, ~200×56) — pas de redémarrage nécessaire en dev.
+- **Styles** : éditer `resources/css/takalo.css`. Recharger la page de login pour voir les changements.
+- **Textes (i18n)** : créer `login/messages/messages_fr.properties`, par ex. `loginAccountTitle=Connexion à Takalo`.
+- **Templates HTML** : copier les `*.ftl` souhaités depuis le thème de base (`docker exec takalo-keycloak find /opt/keycloak/lib -name 'login.ftl'`) vers `keycloak-themes/takalo/login/` puis adapter.
+
+> ⚠️ **Prod** : retirer les flags `--spi-theme-cache-*=false` du `docker-compose.yml` (ou passer Keycloak en `start` au lieu de `start-dev`) pour réactiver le cache et bénéficier des perfs.
 
 ---
 
