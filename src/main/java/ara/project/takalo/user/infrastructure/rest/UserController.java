@@ -4,6 +4,7 @@ import ara.project.takalo.user.application.port.in.UserServicePort;
 import ara.project.takalo.user.infrastructure.rest.dto.AssignRoleRequest;
 import ara.project.takalo.user.infrastructure.rest.dto.UserResponse;
 import ara.project.takalo.user.infrastructure.rest.mapper.UserWebMapper;
+import ara.project.takalo.user.infrastructure.security.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -13,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,8 +36,8 @@ public class UserController {
 
     @GetMapping("/me")
     @Operation(summary = "Profil de l'utilisateur courant")
-    public ResponseEntity<UserResponse> me(@AuthenticationPrincipal Jwt jwt) {
-        var user = userServicePort.getByExternalId(jwt.getSubject());
+    public ResponseEntity<UserResponse> me(@AuthenticationPrincipal AuthenticatedUser principal) {
+        var user = userServicePort.getByExternalId(principal.externalId());
         return ResponseEntity.ok(webMapper.toResponse(user));
     }
 

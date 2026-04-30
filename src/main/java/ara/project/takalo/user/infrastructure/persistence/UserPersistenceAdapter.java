@@ -25,8 +25,14 @@ public class UserPersistenceAdapter implements UserRepository {
 
     @Override
     public User save(User user) {
-        UserEntity entity = jpaUserRepository.findByExternalId(user.externalId())
-                .orElseGet(UserEntity::new);
+        UserEntity entity = null;
+        if (user.id() != null) {
+            entity = jpaUserRepository.findById(user.id()).orElse(null);
+        }
+        if (entity == null) {
+            entity = jpaUserRepository.findByExternalId(user.externalId())
+                    .orElseGet(UserEntity::new);
+        }
 
         entity.setExternalId(user.externalId());
         entity.setEmail(user.email());
@@ -52,6 +58,11 @@ public class UserPersistenceAdapter implements UserRepository {
     @Override
     public Optional<User> findByExternalId(String externalId) {
         return jpaUserRepository.findByExternalId(externalId).map(userMapper::toDomain);
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return jpaUserRepository.findByEmail(email).map(userMapper::toDomain);
     }
 
     @Override

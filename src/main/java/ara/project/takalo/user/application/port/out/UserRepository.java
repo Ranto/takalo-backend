@@ -13,6 +13,8 @@ public interface UserRepository {
 
     Optional<User> findByExternalId(String externalId);
 
+    Optional<User> findByEmail(String email);
+
     User addRole(UUID userId, UUID roleId);
 
     User removeRole(UUID userId, UUID roleId);

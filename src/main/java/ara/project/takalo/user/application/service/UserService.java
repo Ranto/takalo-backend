@@ -46,20 +46,34 @@ public class UserService implements UserServicePort {
 
     @Override
     public User provision(String externalId, String email, String displayName) {
-        return userRepository.findByExternalId(externalId)
-                .orElseGet(() -> {
-                    Role defaultRole = roleRepository.findByName(DEFAULT_ROLE)
-                            .orElseThrow(() -> new ResourceNotFoundException("Rôle par défaut introuvable: " + DEFAULT_ROLE));
-                    User toCreate = new User(
-                            null,
-                            externalId,
-                            email,
-                            displayName,
-                            Set.of(defaultRole),
-                            null,
-                            null);
-                    return userRepository.save(toCreate);
-                });
+        Optional<User> byExternalId = userRepository.findByExternalId(externalId);
+        if (byExternalId.isPresent()) {
+            return byExternalId.get();
+        }
+        Optional<User> byEmail = userRepository.findByEmail(email);
+        if (byEmail.isPresent()) {
+            User existing = byEmail.get();
+            User linked = new User(
+                    existing.id(),
+                    externalId,
+                    existing.email(),
+                    existing.displayName(),
+                    existing.roles(),
+                    existing.createdAt(),
+                    existing.updatedAt());
+            return userRepository.save(linked);
+        }
+        Role defaultRole = roleRepository.findByName(DEFAULT_ROLE)
+                .orElseThrow(() -> new ResourceNotFoundException("Rôle par défaut introuvable: " + DEFAULT_ROLE));
+        User toCreate = new User(
+                null,
+                externalId,
+                email,
+                displayName,
+                Set.of(defaultRole),
+                null,
+                null);
+        return userRepository.save(toCreate);
     }
 
     @Override
