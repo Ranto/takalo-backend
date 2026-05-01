@@ -19,6 +19,10 @@ public class ProductCategoryWebMapper {
     }
 
     public ProductCategoryResponse toResponse(ProductCategory domain) {
-        return new ProductCategoryResponse(domain.id(), domain.label(), domain.description());
+        return toResponse(domain, 0L);
+    }
+
+    public ProductCategoryResponse toResponse(ProductCategory domain, long productCount) {
+        return new ProductCategoryResponse(domain.id(), domain.label(), domain.description(), productCount);
     }
 }

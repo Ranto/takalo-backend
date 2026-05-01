@@ -26,4 +26,6 @@ public interface ProductServicePort {
     Map<UUID, String> getProductNames(Set<UUID> ids);
 
     Optional<UUID> findIdByName(String name);
+
+    Map<UUID, Long> countByCategoryIds(Set<UUID> categoryIds);
 }

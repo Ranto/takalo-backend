@@ -83,4 +83,16 @@ public class ProductPersistenceAdapter implements ProductRepository {
                         JpaProductRepository.ProductIdAndName::getName
                 ));
     }
+
+    @Override
+    public Map<UUID, Long> countByCategoryIds(Set<UUID> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.countByCategoryIds(categoryIds).stream()
+                .collect(Collectors.toMap(
+                        JpaProductRepository.CategoryProductCount::getCategoryId,
+                        JpaProductRepository.CategoryProductCount::getCount
+                ));
+    }
 }

@@ -5,6 +5,7 @@ import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryRequest;
 import ara.project.takalo.category.infrastructure.rest.dto.ProductCategoryResponse;
 import ara.project.takalo.category.infrastructure.rest.mapper.ProductCategoryWebMapper;
+import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 import ara.project.takalo.shared.infrastructure.rest.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,7 +31,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/categories")
@@ -39,6 +43,7 @@ import java.util.UUID;
 @Tag(name = "Catégories", description = "Gestion des catégories de produits")
 public class ProductCategoryController {
     private final ProductCategoryServicePort service;
+    private final ProductServicePort productService;
     private final ProductCategoryWebMapper webMapper;
 
     @PostMapping
@@ -67,7 +72,9 @@ public class ProductCategoryController {
     })
     public ProductCategoryResponse getById(
             @Parameter(description = "Identifiant de la catégorie") @PathVariable UUID id) {
-        return webMapper.toResponse(service.getById(id));
+        ProductCategory category = service.getById(id);
+        Map<UUID, Long> counts = productService.countByCategoryIds(Set.of(id));
+        return webMapper.toResponse(category, counts.getOrDefault(id, 0L));
     }
 
     @GetMapping
@@ -78,7 +85,12 @@ public class ProductCategoryController {
             @Parameter(description = "Filtre partiel sur le libellé") @RequestParam(required = false) String label,
             @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
-        return service.search(label, page, size).map(webMapper::toResponse);
+        PagedResponse<ProductCategory> categories = service.search(label, page, size);
+        Set<UUID> ids = categories.content().stream()
+                .map(ProductCategory::id)
+                .collect(Collectors.toSet());
+        Map<UUID, Long> counts = productService.countByCategoryIds(ids);
+        return categories.map(c -> webMapper.toResponse(c, counts.getOrDefault(c.id(), 0L)));
     }
 
     @PutMapping("/{id}")
@@ -97,7 +109,8 @@ public class ProductCategoryController {
             @Parameter(description = "Identifiant de la catégorie") @PathVariable UUID id,
             @Valid @RequestBody ProductCategoryRequest request) {
         ProductCategory updated = service.update(id, webMapper.toDomain(id, request));
-        return webMapper.toResponse(updated);
+        Map<UUID, Long> counts = productService.countByCategoryIds(Set.of(id));
+        return webMapper.toResponse(updated, counts.getOrDefault(id, 0L));
     }
 
     @DeleteMapping("/{id}")

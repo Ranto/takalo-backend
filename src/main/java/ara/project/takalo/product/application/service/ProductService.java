@@ -86,4 +86,13 @@ public class ProductService implements ProductServicePort {
         }
         return repository.findIdByName(name.trim());
     }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Map<UUID, Long> countByCategoryIds(Set<UUID> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.countByCategoryIds(categoryIds);
+    }
 }

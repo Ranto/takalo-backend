@@ -25,4 +25,6 @@ public interface ProductRepository {
     Map<UUID, String> getProductNames(Set<UUID> productIds);
 
     Optional<UUID> findIdByName(String name);
+
+    Map<UUID, Long> countByCategoryIds(Set<UUID> categoryIds);
 }

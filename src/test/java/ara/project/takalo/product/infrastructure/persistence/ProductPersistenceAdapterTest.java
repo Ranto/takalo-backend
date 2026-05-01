@@ -195,4 +195,42 @@ class ProductPersistenceAdapterTest {
             @Override public String getName() { return name; }
         };
     }
+
+    @Test
+    void countByCategoryIds_whenIdsNull_returnsEmptyMap() {
+        Map<UUID, Long> result = adapter.countByCategoryIds(null);
+
+        assertThat(result).isEmpty();
+        verify(jpaRepository, never()).countByCategoryIds(any());
+    }
+
+    @Test
+    void countByCategoryIds_whenIdsEmpty_returnsEmptyMap() {
+        Map<UUID, Long> result = adapter.countByCategoryIds(Set.of());
+
+        assertThat(result).isEmpty();
+        verify(jpaRepository, never()).countByCategoryIds(any());
+    }
+
+    @Test
+    void countByCategoryIds_buildsMapFromProjections() {
+        UUID c1 = UUID.randomUUID();
+        UUID c2 = UUID.randomUUID();
+        Set<UUID> ids = Set.of(c1, c2);
+
+        JpaProductRepository.CategoryProductCount p1 = countProjection(c1, 3L);
+        JpaProductRepository.CategoryProductCount p2 = countProjection(c2, 7L);
+        when(jpaRepository.countByCategoryIds(ids)).thenReturn(List.of(p1, p2));
+
+        Map<UUID, Long> result = adapter.countByCategoryIds(ids);
+
+        assertThat(result).containsEntry(c1, 3L).containsEntry(c2, 7L);
+    }
+
+    private static JpaProductRepository.CategoryProductCount countProjection(UUID categoryId, long count) {
+        return new JpaProductRepository.CategoryProductCount() {
+            @Override public UUID getCategoryId() { return categoryId; }
+            @Override public long getCount() { return count; }
+        };
+    }
 }

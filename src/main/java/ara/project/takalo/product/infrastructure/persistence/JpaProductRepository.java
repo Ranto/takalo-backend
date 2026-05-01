@@ -40,4 +40,12 @@ public interface JpaProductRepository extends JpaRepository<ProductEntity, UUID>
 
     @Query("SELECT p.id as id, p.name as name FROM ProductEntity p WHERE p.id IN :ids")
     List<ProductIdAndName> findNamesById(@Param("ids") Set<UUID> ids);
+
+    interface CategoryProductCount {
+        UUID getCategoryId();
+        long getCount();
+    }
+
+    @Query("SELECT p.categoryId as categoryId, COUNT(p.id) as count FROM ProductEntity p WHERE p.categoryId IN :ids GROUP BY p.categoryId")
+    List<CategoryProductCount> countByCategoryIds(@Param("ids") Set<UUID> ids);
 }

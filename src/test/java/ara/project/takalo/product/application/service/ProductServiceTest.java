@@ -189,4 +189,32 @@ class ProductServiceTest {
 
         assertThat(result).isSameAs(names);
     }
+
+    @Test
+    void countByCategoryIds_whenIdsNull_returnsEmptyMap() {
+        Map<UUID, Long> result = service.countByCategoryIds(null);
+
+        assertThat(result).isEmpty();
+        verify(repository, never()).countByCategoryIds(any());
+    }
+
+    @Test
+    void countByCategoryIds_whenIdsEmpty_returnsEmptyMap() {
+        Map<UUID, Long> result = service.countByCategoryIds(Set.of());
+
+        assertThat(result).isEmpty();
+        verify(repository, never()).countByCategoryIds(any());
+    }
+
+    @Test
+    void countByCategoryIds_delegatesToRepository() {
+        UUID categoryId = UUID.randomUUID();
+        Set<UUID> ids = Set.of(categoryId);
+        Map<UUID, Long> counts = Map.of(categoryId, 5L);
+        when(repository.countByCategoryIds(ids)).thenReturn(counts);
+
+        Map<UUID, Long> result = service.countByCategoryIds(ids);
+
+        assertThat(result).isSameAs(counts);
+    }
 }

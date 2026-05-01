@@ -8,6 +8,7 @@ import java.util.UUID;
 public record ProductCategoryResponse(
         @Schema(description = "Identifiant unique") UUID id,
         @Schema(description = "Libellé de la catégorie", example = "Produits laitiers") String label,
-        @Schema(description = "Description de la catégorie", example = "Lait, yaourts, fromages") String description
+        @Schema(description = "Description de la catégorie", example = "Lait, yaourts, fromages") String description,
+        @Schema(description = "Nombre de produits rattachés à la catégorie", example = "12") long productCount
 ) {
 }
