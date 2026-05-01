@@ -18,6 +18,7 @@ public class PurchaseMapper {
                 entity.getOwnerId(),
                 entity.getBudgetId(),
                 entity.getPurchaseDate(),
+                entity.getNotes(),
                 entity.getItems().stream().map(purchaseItemMapper::toDomain).toList()
         );
     }
@@ -29,6 +30,7 @@ public class PurchaseMapper {
                 .ownerId(domain.ownerId())
                 .budgetId(domain.budgetId())
                 .purchaseDate(domain.purchaseDate())
+                .notes(domain.notes())
                 .build();
 
         if (domain.items() != null) {

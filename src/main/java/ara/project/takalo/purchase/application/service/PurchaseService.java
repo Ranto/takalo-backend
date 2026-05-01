@@ -58,6 +58,7 @@ public class PurchaseService implements PurchaseServicePort {
                     existing.ownerId(),
                     existing.budgetId(),
                     purchase.purchaseDate(),
+                    purchase.notes(),
                     purchase.items()
             );
             Purchase purchaseToSave = resolveProductReferences(merged);
@@ -176,6 +177,7 @@ public class PurchaseService implements PurchaseServicePort {
                 purchase.ownerId(),
                 purchase.budgetId(),
                 purchase.purchaseDate(),
+                purchase.notes(),
                 resolvedItems
         );
     }

@@ -29,7 +29,7 @@ class PurchaseWebMapperTest {
                 null,
                 null
         );
-        PurchaseRequest request = new PurchaseRequest(date, null, List.of(itemRequest));
+        PurchaseRequest request = new PurchaseRequest(date, null, null, List.of(itemRequest));
 
         Purchase domain = mapper.toDomain(request);
 
@@ -48,7 +48,7 @@ class PurchaseWebMapperTest {
                 new BigDecimal("1.00"), null, null, "A");
         PurchaseItem item2 = new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("4.00"),
                 BigDecimal.ZERO, null, null, "B");
-        Purchase domain = new Purchase(id, null, null, date, List.of(item1, item2));
+        Purchase domain = new Purchase(id, null, null, date, null, List.of(item1, item2));
 
         PurchaseResponse response = mapper.toResponse(domain);
 

@@ -21,6 +21,7 @@ public class PurchaseWebMapper {
                 null,
                 effectiveBudgetId,
                 request.purchaseDate(),
+                request.notes(),
                 request.items().stream().map(itemWebMapper::toDomain).toList()
         );
     }
@@ -35,6 +36,7 @@ public class PurchaseWebMapper {
         return new PurchaseResponse(purchase.id(),
                 purchase.budgetId(),
                 purchase.purchaseDate(),
+                purchase.notes(),
                 purchase.items().stream().map(itemWebMapper::toResponse).toList(),
                 purchase.getTotalAmount());
     }

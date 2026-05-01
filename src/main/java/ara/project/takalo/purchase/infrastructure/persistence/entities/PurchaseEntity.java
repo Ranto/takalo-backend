@@ -56,6 +56,9 @@ public class PurchaseEntity {
     @Column(name = "budget_id")
     private UUID budgetId;
 
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
     @CreatedBy
     @Column(name = "created_by", nullable = false, updatable = false)
     private UUID createdBy;

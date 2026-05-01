@@ -9,6 +9,7 @@ public record Purchase(UUID id,
                        UUID ownerId,
                        UUID budgetId,
                        Instant purchaseDate,
+                       String notes,
                        List<PurchaseItem> items) {
     public BigDecimal getTotalAmount() {
         return items.stream()
@@ -17,10 +18,10 @@ public record Purchase(UUID id,
     }
 
     public Purchase withOwner(UUID newOwnerId) {
-        return new Purchase(id, newOwnerId, budgetId, purchaseDate, items);
+        return new Purchase(id, newOwnerId, budgetId, purchaseDate, notes, items);
     }
 
     public Purchase withBudget(UUID newBudgetId) {
-        return new Purchase(id, ownerId, newBudgetId, purchaseDate, items);
+        return new Purchase(id, ownerId, newBudgetId, purchaseDate, notes, items);
     }
 }

@@ -24,7 +24,7 @@ class PurchaseLightWebMapperTest {
                 BigDecimal.ZERO, null, null, "A");
         PurchaseItem item2 = new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("5.00"),
                 new BigDecimal("0.50"), null, null, "B");
-        Purchase domain = new Purchase(id, null, null, date, List.of(item1, item2));
+        Purchase domain = new Purchase(id, null, null, date, null, List.of(item1, item2));
 
         PurchaseLightResponse response = mapper.toResponse(domain);
 

@@ -60,8 +60,8 @@ class PurchaseServiceTest {
         UUID productId2 = UUID.randomUUID();
         PurchaseItem item1 = new PurchaseItem(null, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, "Lait");
         PurchaseItem item2 = new PurchaseItem(null, 2.0, new BigDecimal("4.00"), BigDecimal.ZERO, null, null, "Pain");
-        Purchase input = new Purchase(null, null, null, Instant.parse("2024-01-01T00:00:00Z"), List.of(item1, item2));
-        Purchase saved = new Purchase(UUID.randomUUID(), currentUser, null, input.purchaseDate(), List.of());
+        Purchase input = new Purchase(null, null, null, Instant.parse("2024-01-01T00:00:00Z"), null, List.of(item1, item2));
+        Purchase saved = new Purchase(UUID.randomUUID(), currentUser, null, input.purchaseDate(), null, List.of());
 
         when(currentUserProvider.id()).thenReturn(currentUser);
         when(productService.findOrCreateByName("Lait"))
@@ -90,7 +90,7 @@ class PurchaseServiceTest {
         UUID currentUser = UUID.randomUUID();
         UUID existingId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(null, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, "PÂTES");
-        Purchase input = new Purchase(null, null, null, Instant.now(), List.of(item));
+        Purchase input = new Purchase(null, null, null, Instant.now(), null, List.of(item));
 
         when(currentUserProvider.id()).thenReturn(currentUser);
         when(productService.findOrCreateByName("PÂTES"))
@@ -109,9 +109,9 @@ class PurchaseServiceTest {
         UUID owner = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(null, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, "Lait");
-        Purchase existing = new Purchase(id, owner, null, Instant.parse("2024-01-01T00:00:00Z"), List.of());
-        Purchase body = new Purchase(null, null, null, Instant.parse("2024-02-01T00:00:00Z"), List.of(item));
-        Purchase saved = new Purchase(id, owner, null, body.purchaseDate(), List.of());
+        Purchase existing = new Purchase(id, owner, null, Instant.parse("2024-01-01T00:00:00Z"), null, List.of());
+        Purchase body = new Purchase(null, null, null, Instant.parse("2024-02-01T00:00:00Z"), null, List.of(item));
+        Purchase saved = new Purchase(id, owner, null, body.purchaseDate(), null, List.of());
 
         when(repository.findById(id)).thenReturn(Optional.of(existing));
         when(productService.findOrCreateByName("Lait"))
@@ -132,7 +132,7 @@ class PurchaseServiceTest {
     @Test
     void update_whenNotFound_throwsResourceNotFound() {
         UUID id = UUID.randomUUID();
-        Purchase body = new Purchase(null, null, null, Instant.now(), List.of());
+        Purchase body = new Purchase(null, null, null, Instant.now(), null, List.of());
 
         when(repository.findById(id)).thenReturn(Optional.empty());
 
@@ -147,7 +147,7 @@ class PurchaseServiceTest {
     void delete_whenOwner_delegatesToRepository() {
         UUID id = UUID.randomUUID();
         UUID owner = UUID.randomUUID();
-        Purchase existing = new Purchase(id, owner, null, Instant.now(), List.of());
+        Purchase existing = new Purchase(id, owner, null, Instant.now(), null, List.of());
         when(repository.findById(id)).thenReturn(Optional.of(existing));
         when(currentUserProvider.id()).thenReturn(owner);
 
@@ -160,7 +160,7 @@ class PurchaseServiceTest {
     void getById_whenOwnerWithReadOwn_returnsDomain() {
         UUID id = UUID.randomUUID();
         UUID currentUser = UUID.randomUUID();
-        Purchase found = new Purchase(id, currentUser, null, Instant.now(), List.of());
+        Purchase found = new Purchase(id, currentUser, null, Instant.now(), null, List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(false);
         when(currentUserProvider.id()).thenReturn(currentUser);
@@ -175,7 +175,7 @@ class PurchaseServiceTest {
         UUID id = UUID.randomUUID();
         UUID owner = UUID.randomUUID();
         UUID other = UUID.randomUUID();
-        Purchase found = new Purchase(id, owner, null, Instant.now(), List.of());
+        Purchase found = new Purchase(id, owner, null, Instant.now(), null, List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(false);
         when(currentUserProvider.id()).thenReturn(other);
@@ -187,7 +187,7 @@ class PurchaseServiceTest {
     @Test
     void getById_whenReadAny_returnsRegardlessOfOwner() {
         UUID id = UUID.randomUUID();
-        Purchase found = new Purchase(id, UUID.randomUUID(), null, Instant.now(), List.of());
+        Purchase found = new Purchase(id, UUID.randomUUID(), null, Instant.now(), null, List.of());
         when(repository.findById(id)).thenReturn(Optional.of(found));
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(true);
 
@@ -223,7 +223,7 @@ class PurchaseServiceTest {
         PurchaseItem item = new PurchaseItem(null, 1.0, new BigDecimal("75.00"),
                 BigDecimal.ZERO, null, null, "Pain");
         Purchase input = new Purchase(null, null, budgetId,
-                Instant.parse("2026-04-10T12:00:00Z"), List.of(item));
+                Instant.parse("2026-04-10T12:00:00Z"), null, List.of(item));
 
         when(currentUserProvider.id()).thenReturn(alice);
         when(budgetService.getRawById(budgetId)).thenReturn(budgetWithEditors(budgetId, alice));
@@ -248,7 +248,7 @@ class PurchaseServiceTest {
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("50.00"),
                 BigDecimal.ZERO, null, null, null);
-        Purchase input = new Purchase(null, null, budgetId, Instant.now(), List.of(item));
+        Purchase input = new Purchase(null, null, budgetId, Instant.now(), null, List.of(item));
 
         when(currentUserProvider.id()).thenReturn(alice);
         // Le budget est créé par bob, alice n'est pas dans la liste des éditeurs.
@@ -268,7 +268,7 @@ class PurchaseServiceTest {
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("50.00"),
                 BigDecimal.ZERO, null, null, null);
-        Purchase input = new Purchase(null, null, budgetId, Instant.now(), List.of(item));
+        Purchase input = new Purchase(null, null, budgetId, Instant.now(), null, List.of(item));
 
         when(currentUserProvider.id()).thenReturn(alice);
         when(budgetService.getRawById(budgetId))
@@ -286,7 +286,7 @@ class PurchaseServiceTest {
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(null, 1.0, new BigDecimal("30.00"),
                 BigDecimal.ZERO, null, null, "x");
-        Purchase input = new Purchase(null, null, null, Instant.now(), List.of(item));
+        Purchase input = new Purchase(null, null, null, Instant.now(), null, List.of(item));
 
         when(currentUserProvider.id()).thenReturn(alice);
         when(productService.findOrCreateByName("x"))
@@ -303,7 +303,7 @@ class PurchaseServiceTest {
         UUID id = UUID.randomUUID();
         UUID owner = UUID.randomUUID();
         UUID budgetId = UUID.randomUUID();
-        Purchase existing = new Purchase(id, owner, budgetId, Instant.now(), List.of());
+        Purchase existing = new Purchase(id, owner, budgetId, Instant.now(), null, List.of());
         when(repository.findById(id)).thenReturn(Optional.of(existing));
         when(currentUserProvider.id()).thenReturn(owner);
 
@@ -328,7 +328,7 @@ class PurchaseServiceTest {
         PurchaseItem item = new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("80.00"),
                 BigDecimal.ZERO, null, null, "p");
         Purchase existing = new Purchase(purchaseId, alice, courses,
-                Instant.parse("2026-04-10T12:00:00Z"), List.of(item));
+                Instant.parse("2026-04-10T12:00:00Z"), null, List.of(item));
         Instant when = Instant.parse("2026-04-29T10:00:00Z");
 
         when(repository.findById(purchaseId)).thenReturn(Optional.of(existing));

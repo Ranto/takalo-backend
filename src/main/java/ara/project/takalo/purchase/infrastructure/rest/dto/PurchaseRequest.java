@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
 import org.openapitools.jackson.nullable.JsonNullable;
 
 import java.time.Instant;
@@ -24,6 +25,10 @@ public record PurchaseRequest(
                 "valeur explicite = imputer ce budget ; " +
                 "explicitement null = aucun budget (court-circuite le défaut).")
         JsonNullable<UUID> budgetId,
+
+        @Schema(description = "Note libre facultative associée à l'achat", example = "Courses du week-end")
+        @Size(max = 2000, message = "La note ne peut pas dépasser 2000 caractères.")
+        String notes,
 
         @Schema(description = "Articles de l'achat", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotEmpty(message = "L'achat doit contenir au moins un article.")

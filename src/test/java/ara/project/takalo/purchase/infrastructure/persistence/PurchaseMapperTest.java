@@ -126,7 +126,7 @@ class PurchaseMapperTest {
                 "Carrefour",
                 "Pain"
         );
-        Purchase domain = new Purchase(purchaseId, null, null, date, List.of(item));
+        Purchase domain = new Purchase(purchaseId, null, null, date, null, List.of(item));
 
         PurchaseEntity entity = mapper.toEntity(domain);
 
@@ -150,7 +150,7 @@ class PurchaseMapperTest {
                 UUID.randomUUID(), 4.0, new BigDecimal("1.20"), BigDecimal.ZERO,
                 null, "Leclerc", "Yaourt");
         Purchase domain = new Purchase(UUID.randomUUID(), null, null,
-                Instant.parse("2026-04-20T10:00:00Z"), List.of(milk, bread, yogurt));
+                Instant.parse("2026-04-20T10:00:00Z"), null, List.of(milk, bread, yogurt));
 
         PurchaseEntity entity = mapper.toEntity(domain);
 
@@ -164,7 +164,7 @@ class PurchaseMapperTest {
 
     @Test
     void toEntity_withNullItems_skipsItemMapping() {
-        Purchase domain = new Purchase(UUID.randomUUID(), null, null, Instant.now(), null);
+        Purchase domain = new Purchase(UUID.randomUUID(), null, null, Instant.now(), null, null);
 
         PurchaseEntity entity = mapper.toEntity(domain);
 
