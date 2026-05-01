@@ -3,6 +3,7 @@ package ara.project.takalo.purchase.application.service;
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
+import ara.project.takalo.product.domain.model.Product;
 import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
@@ -22,10 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -47,7 +46,7 @@ public class PurchaseService implements PurchaseServicePort {
         if (withOwner.budgetId() != null) {
             requireBudgetEditor(withOwner.budgetId());
         }
-        Purchase purchaseToSave = getPurchaseWithProductName(withOwner);
+        Purchase purchaseToSave = resolveProductReferences(withOwner);
         return repository.save(purchaseToSave);
     }
 
@@ -61,7 +60,7 @@ public class PurchaseService implements PurchaseServicePort {
                     purchase.purchaseDate(),
                     purchase.items()
             );
-            Purchase purchaseToSave = getPurchaseWithProductName(merged);
+            Purchase purchaseToSave = resolveProductReferences(merged);
             return repository.save(purchaseToSave);
         }).orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
     }
@@ -158,34 +157,26 @@ public class PurchaseService implements PurchaseServicePort {
         }
     }
 
-    private @NonNull Purchase getPurchaseWithProductName(Purchase purchase) {
-        Set<UUID> productIds = purchase.items().stream()
-                .map(PurchaseItem::productId)
-                .collect(Collectors.toSet());
-
-        Map<UUID, String> productMapNames = productService.getProductNames(productIds);
-
-        List<PurchaseItem> enrichedItems = purchase.items().stream().map(
-                item -> {
-                    String productName = productMapNames.getOrDefault(item.productId(), "Produit supprimé");
-                    return new PurchaseItem(
-                            item.productId(),
-                            item.quantity(),
-                            item.unitPrice(),
-                            item.discount(),
-                            item.expiryDate(),
-                            item.storeName(),
-                            productName
-                    );
-                }
-        ).toList();
+    private @NonNull Purchase resolveProductReferences(Purchase purchase) {
+        List<PurchaseItem> resolvedItems = purchase.items().stream().map(item -> {
+            Product product = productService.findOrCreateByName(item.productName());
+            return new PurchaseItem(
+                    product.id(),
+                    item.quantity(),
+                    item.unitPrice(),
+                    item.discount(),
+                    item.expiryDate(),
+                    item.storeName(),
+                    product.name()
+            );
+        }).toList();
 
         return new Purchase(
                 purchase.id(),
                 purchase.ownerId(),
                 purchase.budgetId(),
                 purchase.purchaseDate(),
-                enrichedItems
+                resolvedItems
         );
     }
 }

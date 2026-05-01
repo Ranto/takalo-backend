@@ -87,6 +87,17 @@ public class ProductService implements ProductServicePort {
         return repository.findIdByName(name.trim());
     }
 
+    @Override
+    public Product findOrCreateByName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Le nom du produit est obligatoire");
+        }
+        String trimmed = name.trim();
+        return repository.findIdByName(trimmed)
+                .map(this::getById)
+                .orElseGet(() -> repository.save(new Product(null, trimmed, null, null, null)));
+    }
+
     @Transactional(readOnly = true)
     @Override
     public Map<UUID, Long> countByCategoryIds(Set<UUID> categoryIds) {

@@ -2,19 +2,23 @@ package ara.project.takalo.purchase.infrastructure.rest.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Schema(description = "Article d'un achat")
 public record PurchaseItemRequest(
-        @Schema(description = "Identifiant du produit acheté", requiredMode = Schema.RequiredMode.REQUIRED)
-        @NotNull(message = "L'identifiant du produit est obligatoire.")
-        UUID productId,
+        @Schema(description = "Nom du produit acheté. Si aucun produit ne porte ce nom (correspondance exacte, "
+                + "insensible à la casse), il sera créé automatiquement avec une catégorie vide.",
+                example = "Pâtes complètes", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotBlank(message = "Le nom du produit est obligatoire.")
+        @Size(min = 1, max = 100, message = "Le nom du produit doit contenir entre 1 et 100 caractères.")
+        String productName,
 
         @Schema(description = "Prix unitaire", example = "2.50", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull(message = "Le prix unitaire est obligatoire.")
@@ -35,9 +39,6 @@ public record PurchaseItemRequest(
         LocalDate expiryDate,
 
         @Schema(description = "Nom du magasin", example = "Carrefour Antananarivo")
-        String storeName,
-
-        @Schema(description = "Nom du produit (utilisé lors de l'import quand l'identifiant n'est pas connu)")
-        String productName
+        String storeName
 ) {
 }

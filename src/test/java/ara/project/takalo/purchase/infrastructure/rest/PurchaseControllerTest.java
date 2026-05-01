@@ -66,23 +66,22 @@ class PurchaseControllerTest {
     @MockitoBean
     private CurrentUserProvider currentUserProvider;
 
-    private static String validRequestJson(UUID productId, String purchaseDate) {
+    private static String validRequestJson(String productName, String purchaseDate) {
         return """
                 {
                   "purchaseDate": "%s",
                   "items": [
                     {
-                      "productId": "%s",
+                      "productName": "%s",
                       "unitPrice": 10.00,
                       "quantity": 2.0,
                       "discount": 1.00,
                       "expiryDate": "2030-01-01",
-                      "storeName": "Carrefour",
-                      "productName": "Lait"
+                      "storeName": "Carrefour"
                     }
                   ]
                 }
-                """.formatted(purchaseDate, productId);
+                """.formatted(purchaseDate, productName);
     }
 
     @Test
@@ -98,7 +97,7 @@ class PurchaseControllerTest {
 
         mockMvc.perform(post("/api/v1/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validRequestJson(productId, "2024-01-01T00:00:00Z")))
+                        .content(validRequestJson("Lait", "2024-01-01T00:00:00Z")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(generated.toString()))
                 .andExpect(jsonPath("$.items[0].productId").value(productId.toString()))
@@ -111,12 +110,13 @@ class PurchaseControllerTest {
         assertThat(passed.id()).isNull();
         assertThat(passed.purchaseDate()).isEqualTo(purchaseDate);
         assertThat(passed.items()).hasSize(1);
-        assertThat(passed.items().getFirst().productId()).isEqualTo(productId);
+        assertThat(passed.items().getFirst().productId()).isNull();
+        assertThat(passed.items().getFirst().productName()).isEqualTo("Lait");
     }
 
     @Test
     void create_whenPurchaseDateInFuture_returns400() throws Exception {
-        String json = validRequestJson(UUID.randomUUID(), "2999-01-01T00:00:00Z");
+        String json = validRequestJson("Lait", "2999-01-01T00:00:00Z");
 
         mockMvc.perform(post("/api/v1/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -142,7 +142,7 @@ class PurchaseControllerTest {
                 {
                   "purchaseDate": "2024-01-01T00:00:00Z",
                   "items": [
-                    { "productId": null, "unitPrice": -1, "quantity": 0 }
+                    { "productName": "  ", "unitPrice": -1, "quantity": 0 }
                   ]
                 }
                 """;
@@ -183,7 +183,7 @@ class PurchaseControllerTest {
 
         mockMvc.perform(put("/api/v1/purchases/{id}", pathId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validRequestJson(productId, "2024-01-01T00:00:00Z")))
+                        .content(validRequestJson("Lait", "2024-01-01T00:00:00Z")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(pathId.toString()));
 
@@ -211,24 +211,23 @@ class PurchaseControllerTest {
     // Budget par défaut à la création d'achat (S64, S65, S66)
     // ------------------------------------------------------------------
 
-    private static String requestWithBudgetField(UUID productId, String budgetIdLiteral) {
+    private static String requestWithBudgetField(String productName, String budgetIdLiteral) {
         // budgetIdLiteral peut être "null", "\"<uuid>\"" ou être omis (champ absent).
         String field = budgetIdLiteral == null ? "" : ("\"budgetId\": " + budgetIdLiteral + ",\n");
         return """
                 {
                   %s"purchaseDate": "2026-04-10T12:00:00Z",
                   "items": [
-                    { "productId": "%s", "unitPrice": 75.00, "quantity": 1.0, "discount": 0 }
+                    { "productName": "%s", "unitPrice": 75.00, "quantity": 1.0, "discount": 0 }
                   ]
                 }
-                """.formatted(field, productId);
+                """.formatted(field, productName);
     }
 
     @Test
     void create_noBudgetField_usesDefaultBudget() throws Exception {
         UUID alice = UUID.randomUUID();
         UUID defaultBudget = UUID.randomUUID();
-        UUID productId = UUID.randomUUID();
         when(currentUserProvider.id()).thenReturn(alice);
         when(defaultBudgetService.resolveDefaultBudgetIdFor(alice))
                 .thenReturn(Optional.of(defaultBudget));
@@ -237,7 +236,7 @@ class PurchaseControllerTest {
 
         mockMvc.perform(post("/api/v1/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestWithBudgetField(productId, null)))
+                        .content(requestWithBudgetField("Lait", null)))
                 .andExpect(status().isCreated());
 
         ArgumentCaptor<Purchase> captor = ArgumentCaptor.forClass(Purchase.class);

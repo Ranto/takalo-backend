@@ -3,9 +3,9 @@ POST http://localhost:8081/realms/takalo/protocol/openid-connect/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type = password &
-client_id = takalo-backend &
-username = admin &
-password = adminadmin
+client_id = takalo-frontend &
+username = ranto &
+password = rantoranto
 
 > {%
     client.global.set("access_token", response.body.access_token);
@@ -77,7 +77,7 @@ Content-Type: application/json
   "budgetId": "{{budget_id}}",
   "items": [
     {
-      "productId": "{{product_id}}",
+      "productName": "Pâtes complètes",
       "unitPrice": 2.50,
       "quantity": 3,
       "discount": 0.50,
@@ -100,7 +100,7 @@ Content-Type: application/json
   "purchaseDate": "2026-04-15T11:00:00Z",
   "items": [
     {
-      "productId": "{{product_id}}",
+      "productName": "Pâtes complètes",
       "unitPrice": 1.00,
       "quantity": 2
     }
@@ -117,7 +117,7 @@ Content-Type: application/json
   "budgetId": null,
   "items": [
     {
-      "productId": "{{product_id}}",
+      "productName": "Pâtes complètes",
       "unitPrice": 1.20,
       "quantity": 1
     }
@@ -133,7 +133,7 @@ Content-Type: application/json
   "purchaseDate": "2099-01-01T00:00:00Z",
   "items": [
     {
-      "productId": "{{product_id}}",
+      "productName": "Pâtes complètes",
       "unitPrice": 1.00,
       "quantity": 1
     }
@@ -159,7 +159,7 @@ Content-Type: application/json
   "purchaseDate": "2026-04-15T10:00:00Z",
   "items": [
     {
-      "productId": "{{product_id}}",
+      "productName": "Pâtes complètes",
       "unitPrice": 1.00,
       "quantity": 0
     }
@@ -175,14 +175,14 @@ Content-Type: application/json
   "purchaseDate": "2026-04-15T10:00:00Z",
   "items": [
     {
-      "productId": "{{product_id}}",
+      "productName": "Pâtes complètes",
       "unitPrice": -1.00,
       "quantity": 1
     }
   ]
 }
 
-### Créer un achat — produit inconnu (404)
+### Créer un achat — produit inconnu (création implicite avec catégorie nulle)
 POST http://localhost:8080/api/v1/purchases
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
@@ -191,7 +191,39 @@ Content-Type: application/json
   "purchaseDate": "2026-04-15T10:00:00Z",
   "items": [
     {
-      "productId": "00000000-0000-0000-0000-000000000000",
+      "productName": "Produit créé à la volée",
+      "unitPrice": 1.00,
+      "quantity": 1
+    }
+  ]
+}
+
+### Créer un achat — variation de casse réutilise le produit existant
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T10:00:00Z",
+  "items": [
+    {
+      "productName": "pâtes COMPLÈTES",
+      "unitPrice": 1.00,
+      "quantity": 1
+    }
+  ]
+}
+
+### Créer un achat — productName vide (400)
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-15T10:00:00Z",
+  "items": [
+    {
+      "productName": "  ",
       "unitPrice": 1.00,
       "quantity": 1
     }
@@ -228,7 +260,7 @@ Content-Type: application/json
   "budgetId": "{{budget_id}}",
   "items": [
     {
-      "productId": "{{product_id}}",
+      "productName": "Pâtes complètes",
       "unitPrice": 2.20,
       "quantity": 4,
       "storeName": "Shoprite"
@@ -245,7 +277,7 @@ Content-Type: application/json
   "purchaseDate": "2026-04-16T09:00:00Z",
   "items": [
     {
-      "productId": "{{product_id}}",
+      "productName": "Pâtes complètes",
       "unitPrice": 1.00,
       "quantity": 1
     }
@@ -333,3 +365,35 @@ contenu inutile
 
 ### Sans authentification (401)
 GET http://localhost:8080/api/v1/purchases
+
+
+
+
+#### TEST
+POST http://localhost:8080/api/v1/purchases
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJrMWVZeHl0UlpLRUhldkpHSDdHN2NFbVM0SHVXU2xFb1FRT1hKbzFRMUpRIn0.eyJleHAiOjE3Nzc2MzEyNTcsImlhdCI6MTc3NzYzMDk1NywiYXV0aF90aW1lIjoxNzc3NjE1OTA4LCJqdGkiOiI1OTMzNzE4YS1jOWM0LTQ1MTMtYTQ5YS1kMzRjMzY1ZTAzNjQiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODEvcmVhbG1zL3Rha2FsbyIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiJlM2M1NzUyZi0xMWIyLTRhMzQtYmJkYy0yZWJmMzBiMzE1NjAiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ0YWthbG8tZnJvbnRlbmQiLCJzaWQiOiI3NDk5MjY2OS1lNWEwLTQzNWEtYjVmNS0xMzJiMmM3MzNjZGIiLCJhY3IiOiIwIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly9sb2NhbGhvc3Q6NDIwMCJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsib2ZmbGluZV9hY2Nlc3MiLCJkZWZhdWx0LXJvbGVzLXRha2FsbyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiUmFudG8gQU5EUklBTkpBRlkiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJyYW50byIsImdpdmVuX25hbWUiOiJSYW50byIsImZhbWlseV9uYW1lIjoiQU5EUklBTkpBRlkiLCJlbWFpbCI6InJhbnRvQHRha2Fsby5sb2NhbCJ9.U0uoL4c96glRZfe0XwkxDbyg9BtfMHkK0BC1wAHaft4vWGhihK7PIEmWWSWDH8jlMo3wIPLPoPG7hCKOH-OPvj3zcm3wyQet8umg_HconT-qBsZQDYfOrwIB9QugM7fZwIDrFuXLiJbWi5gzsO7XIlvFo_fpKFzIaPJy8u8Aeb7yRRFkQuK4ddlWMizYTPbH3-r9SJikbsC1R7Yb7pxKExuVEOtDWNrqXU12YmaM_QspIM3UOMTNYv9fBCra0zSpKXB3dND6uriOpDjRBsMVFxnbxcr9EWzx_wDDLvJedsVwRwsr1E0Q9UH6gLFeHTx_5Zf2WDghH5L7teswuCdQdg
+Content-Type: application/json
+
+{
+  "purchaseDate": "2026-04-17T00:00:00Z",
+  "items": [
+    {
+      "productName": "Riz",
+      "unitPrice": 3000,
+      "quantity": 1
+    },
+    {
+      "productName": "Pain",
+      "unitPrice": 800,
+      "quantity": 3
+    },
+    {
+      "productName": "Lait",
+      "unitPrice": 2000,
+      "quantity": 1
+    }
+  ]
+}
+
+
+

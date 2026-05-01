@@ -21,13 +21,11 @@ class PurchaseWebMapperTest {
     @Test
     void toDomain_buildsDomainWithNullIdAndMappedItems() {
         Instant date = Instant.parse("2024-01-01T00:00:00Z");
-        UUID productId = UUID.randomUUID();
         PurchaseItemRequest itemRequest = new PurchaseItemRequest(
-                productId,
+                "Lait",
                 new BigDecimal("10.00"),
                 2.0,
                 new BigDecimal("1.00"),
-                null,
                 null,
                 null
         );
@@ -38,7 +36,8 @@ class PurchaseWebMapperTest {
         assertThat(domain.id()).isNull();
         assertThat(domain.purchaseDate()).isEqualTo(date);
         assertThat(domain.items()).hasSize(1);
-        assertThat(domain.items().getFirst().productId()).isEqualTo(productId);
+        assertThat(domain.items().getFirst().productId()).isNull();
+        assertThat(domain.items().getFirst().productName()).isEqualTo("Lait");
     }
 
     @Test

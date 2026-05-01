@@ -12,7 +12,7 @@ public class PurchaseItemWebMapper {
     
     public PurchaseItem toDomain(PurchaseItemRequest request) {
         return new PurchaseItem(
-                request.productId(),
+                null,
                 request.quantity(),
                 request.unitPrice(),
                 request.discount() == null ? BigDecimal.ZERO : request.discount(),

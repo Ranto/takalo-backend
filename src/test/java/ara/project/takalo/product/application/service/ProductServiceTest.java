@@ -191,6 +191,54 @@ class ProductServiceTest {
     }
 
     @Test
+    void findOrCreateByName_whenExists_returnsExistingProduct() {
+        UUID existingId = UUID.randomUUID();
+        Product existing = new Product(existingId, "Pâtes complètes", UUID.randomUUID(), Instant.now(), Instant.now());
+        when(repository.findIdByName("Pâtes complètes")).thenReturn(Optional.of(existingId));
+        when(repository.findById(existingId)).thenReturn(Optional.of(existing));
+
+        Product result = service.findOrCreateByName("Pâtes complètes");
+
+        assertThat(result).isSameAs(existing);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void findOrCreateByName_whenMissing_createsWithNullCategory() {
+        when(repository.findIdByName("Nouveau")).thenReturn(Optional.empty());
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        Product persisted = new Product(UUID.randomUUID(), "Nouveau", null, Instant.now(), Instant.now());
+        when(repository.save(any(Product.class))).thenReturn(persisted);
+
+        Product result = service.findOrCreateByName("Nouveau");
+
+        verify(repository).save(captor.capture());
+        Product saved = captor.getValue();
+        assertThat(saved.id()).isNull();
+        assertThat(saved.name()).isEqualTo("Nouveau");
+        assertThat(saved.categoryId()).isNull();
+        assertThat(result).isSameAs(persisted);
+    }
+
+    @Test
+    void findOrCreateByName_trimsInputName() {
+        when(repository.findIdByName("Lait")).thenReturn(Optional.empty());
+        when(repository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Product result = service.findOrCreateByName("  Lait  ");
+
+        assertThat(result.name()).isEqualTo("Lait");
+    }
+
+    @Test
+    void findOrCreateByName_whenNameBlank_throws() {
+        assertThatThrownBy(() -> service.findOrCreateByName(" "))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).findIdByName(any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void countByCategoryIds_whenIdsNull_returnsEmptyMap() {
         Map<UUID, Long> result = service.countByCategoryIds(null);
 

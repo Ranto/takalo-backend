@@ -16,36 +16,33 @@ class PurchaseItemWebMapperTest {
     private final PurchaseItemWebMapper mapper = new PurchaseItemWebMapper();
 
     @Test
-    void toDomain_mapsAllFields() {
-        UUID productId = UUID.randomUUID();
+    void toDomain_mapsProductNameAndLeavesProductIdNull() {
         PurchaseItemRequest request = new PurchaseItemRequest(
-                productId,
+                "Lait",
                 new BigDecimal("10.00"),
                 2.0,
                 new BigDecimal("1.00"),
                 LocalDate.of(2030, 1, 1),
-                "Carrefour",
-                "Lait"
+                "Carrefour"
         );
 
         PurchaseItem domain = mapper.toDomain(request);
 
-        assertThat(domain.productId()).isEqualTo(productId);
+        assertThat(domain.productId()).isNull();
+        assertThat(domain.productName()).isEqualTo("Lait");
         assertThat(domain.unitPrice()).isEqualByComparingTo("10.00");
         assertThat(domain.quantity()).isEqualTo(2.0);
         assertThat(domain.discount()).isEqualByComparingTo("1.00");
         assertThat(domain.expiryDate()).isEqualTo(LocalDate.of(2030, 1, 1));
         assertThat(domain.storeName()).isEqualTo("Carrefour");
-        assertThat(domain.productName()).isEqualTo("Lait");
     }
 
     @Test
     void toDomain_whenDiscountNull_defaultsToZero() {
         PurchaseItemRequest request = new PurchaseItemRequest(
-                UUID.randomUUID(),
+                "Pain",
                 new BigDecimal("10.00"),
                 1.0,
-                null,
                 null,
                 null,
                 null

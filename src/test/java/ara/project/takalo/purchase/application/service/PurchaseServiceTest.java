@@ -3,6 +3,7 @@ package ara.project.takalo.purchase.application.service;
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
+import ara.project.takalo.product.domain.model.Product;
 import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.domain.model.Purchase;
@@ -23,7 +24,6 @@ import org.springframework.security.access.AccessDeniedException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -54,18 +54,20 @@ class PurchaseServiceTest {
     private PurchaseService service;
 
     @Test
-    void create_enrichesItemsWithProductNamesAndSaves() {
+    void create_resolvesItemsByProductNameAndSaves() {
         UUID currentUser = UUID.randomUUID();
         UUID productId1 = UUID.randomUUID();
         UUID productId2 = UUID.randomUUID();
-        PurchaseItem item1 = new PurchaseItem(productId1, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
-        PurchaseItem item2 = new PurchaseItem(productId2, 2.0, new BigDecimal("4.00"), BigDecimal.ZERO, null, null, null);
+        PurchaseItem item1 = new PurchaseItem(null, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, "Lait");
+        PurchaseItem item2 = new PurchaseItem(null, 2.0, new BigDecimal("4.00"), BigDecimal.ZERO, null, null, "Pain");
         Purchase input = new Purchase(null, null, null, Instant.parse("2024-01-01T00:00:00Z"), List.of(item1, item2));
         Purchase saved = new Purchase(UUID.randomUUID(), currentUser, null, input.purchaseDate(), List.of());
 
         when(currentUserProvider.id()).thenReturn(currentUser);
-        when(productService.getProductNames(Set.of(productId1, productId2)))
-                .thenReturn(Map.of(productId1, "Lait", productId2, "Pain"));
+        when(productService.findOrCreateByName("Lait"))
+                .thenReturn(new Product(productId1, "Lait", null, null, null));
+        when(productService.findOrCreateByName("Pain"))
+                .thenReturn(new Product(productId2, "Pain", null, null, null));
         when(repository.save(any(Purchase.class))).thenReturn(saved);
 
         Purchase result = service.create(input);
@@ -76,38 +78,44 @@ class PurchaseServiceTest {
         assertThat(passed.id()).isNull();
         assertThat(passed.ownerId()).isEqualTo(currentUser);
         assertThat(passed.purchaseDate()).isEqualTo(input.purchaseDate());
+        assertThat(passed.items()).extracting(PurchaseItem::productId)
+                .containsExactly(productId1, productId2);
         assertThat(passed.items()).extracting(PurchaseItem::productName)
-                .containsExactlyInAnyOrder("Lait", "Pain");
+                .containsExactly("Lait", "Pain");
         assertThat(result).isSameAs(saved);
     }
 
     @Test
-    void create_whenProductNameMissing_usesFallback() {
-        UUID productId = UUID.randomUUID();
-        PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
+    void create_usesCanonicalProductNameWhenCaseDiffers() {
+        UUID currentUser = UUID.randomUUID();
+        UUID existingId = UUID.randomUUID();
+        PurchaseItem item = new PurchaseItem(null, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, "PÂTES");
         Purchase input = new Purchase(null, null, null, Instant.now(), List.of(item));
 
-        when(currentUserProvider.id()).thenReturn(UUID.randomUUID());
-        when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of());
+        when(currentUserProvider.id()).thenReturn(currentUser);
+        when(productService.findOrCreateByName("PÂTES"))
+                .thenReturn(new Product(existingId, "Pâtes complètes", null, null, null));
         when(repository.save(any(Purchase.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Purchase result = service.create(input);
 
-        assertThat(result.items().getFirst().productName()).isEqualTo("Produit supprimé");
+        assertThat(result.items().getFirst().productId()).isEqualTo(existingId);
+        assertThat(result.items().getFirst().productName()).isEqualTo("Pâtes complètes");
     }
 
     @Test
-    void update_whenFound_savesEnrichedPurchase() {
+    void update_whenFound_savesResolvedPurchase() {
         UUID id = UUID.randomUUID();
         UUID owner = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
-        PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, null);
+        PurchaseItem item = new PurchaseItem(null, 1.0, new BigDecimal("3.00"), BigDecimal.ZERO, null, null, "Lait");
         Purchase existing = new Purchase(id, owner, null, Instant.parse("2024-01-01T00:00:00Z"), List.of());
         Purchase body = new Purchase(null, null, null, Instant.parse("2024-02-01T00:00:00Z"), List.of(item));
         Purchase saved = new Purchase(id, owner, null, body.purchaseDate(), List.of());
 
         when(repository.findById(id)).thenReturn(Optional.of(existing));
-        when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of(productId, "Lait"));
+        when(productService.findOrCreateByName("Lait"))
+                .thenReturn(new Product(productId, "Lait", null, null, null));
         when(repository.save(any(Purchase.class))).thenReturn(saved);
 
         Purchase result = service.update(id, body);
@@ -116,6 +124,7 @@ class PurchaseServiceTest {
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().id()).isEqualTo(id);
         assertThat(captor.getValue().ownerId()).isEqualTo(owner);
+        assertThat(captor.getValue().items().getFirst().productId()).isEqualTo(productId);
         assertThat(captor.getValue().items().getFirst().productName()).isEqualTo("Lait");
         assertThat(result).isSameAs(saved);
     }
@@ -211,14 +220,15 @@ class PurchaseServiceTest {
         UUID alice = UUID.randomUUID();
         UUID budgetId = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
-        PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("75.00"),
-                BigDecimal.ZERO, null, null, null);
+        PurchaseItem item = new PurchaseItem(null, 1.0, new BigDecimal("75.00"),
+                BigDecimal.ZERO, null, null, "Pain");
         Purchase input = new Purchase(null, null, budgetId,
                 Instant.parse("2026-04-10T12:00:00Z"), List.of(item));
 
         when(currentUserProvider.id()).thenReturn(alice);
         when(budgetService.getRawById(budgetId)).thenReturn(budgetWithEditors(budgetId, alice));
-        when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of(productId, "Pain"));
+        when(productService.findOrCreateByName("Pain"))
+                .thenReturn(new Product(productId, "Pain", null, null, null));
         when(repository.save(any(Purchase.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Purchase result = service.create(input);
@@ -274,12 +284,13 @@ class PurchaseServiceTest {
     void create_withoutBudget_skipsEditorCheck() {
         UUID alice = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
-        PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("30.00"),
-                BigDecimal.ZERO, null, null, null);
+        PurchaseItem item = new PurchaseItem(null, 1.0, new BigDecimal("30.00"),
+                BigDecimal.ZERO, null, null, "x");
         Purchase input = new Purchase(null, null, null, Instant.now(), List.of(item));
 
         when(currentUserProvider.id()).thenReturn(alice);
-        when(productService.getProductNames(Set.of(productId))).thenReturn(Map.of(productId, "x"));
+        when(productService.findOrCreateByName("x"))
+                .thenReturn(new Product(productId, "x", null, null, null));
         when(repository.save(any(Purchase.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.create(input);
