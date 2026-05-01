@@ -23,8 +23,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -77,11 +77,11 @@ public class PurchaseEntity {
             orphanRemoval = true,
             fetch = FetchType.LAZY
     )
-    private Set<PurchaseItemEntity> items = new HashSet<>();
+    private List<PurchaseItemEntity> items = new ArrayList<>();
 
     public void addItem(PurchaseItemEntity item) {
         if (items == null) {
-            items = new HashSet<>();
+            items = new ArrayList<>();
         }
 
         items.add(item);

@@ -81,32 +81,30 @@ class PurchasePersistenceAdapterItemDetailsIT {
         orphanProductId = UUID.randomUUID();
 
         // Achat 1 (Alice, ancien) : 2 lignes Lait + Pain.
-        // Note : les items sont persistés individuellement car PurchaseEntity#addItem utilise
-        // un HashSet qui déduplique les items tant que leur id (clé d'égalité) est null.
         PurchaseEntity p1 = PurchaseEntity.builder()
                 .ownerId(aliceId)
                 .purchaseDate(Instant.parse("2026-01-10T08:00:00Z"))
                 .build();
+        p1.addItem(buildItem(milkId, "Lait", "2.00", 2.0, "0.00", "Carrefour"));
+        p1.addItem(buildItem(breadId, "Pain", "1.50", 1.0, "0.00", "Carrefour"));
         em.persist(p1);
-        persistItem(p1, milkId, "Lait", "2.00", 2.0, "0.00", "Carrefour");
-        persistItem(p1, breadId, "Pain", "1.50", 1.0, "0.00", "Carrefour");
 
         // Achat 2 (Bob, récent) : ligne Lait + ligne avec produit supprimé
         PurchaseEntity p2 = PurchaseEntity.builder()
                 .ownerId(bobId)
                 .purchaseDate(Instant.parse("2026-04-20T10:00:00Z"))
                 .build();
+        p2.addItem(buildItem(milkId, "Lait", "2.10", 3.0, "0.30", "Leclerc"));
+        p2.addItem(buildItem(orphanProductId, "Yaourt supprimé", "1.20", 4.0, "0.00", "Leclerc"));
         em.persist(p2);
-        persistItem(p2, milkId, "Lait", "2.10", 3.0, "0.30", "Leclerc");
-        persistItem(p2, orphanProductId, "Yaourt supprimé", "1.20", 4.0, "0.00", "Leclerc");
 
         em.flush();
         em.clear();
     }
 
-    private void persistItem(PurchaseEntity purchase, UUID productId, String productName,
-                             String unitPrice, double quantity, String discount, String store) {
-        PurchaseItemEntity item = PurchaseItemEntity.builder()
+    private PurchaseItemEntity buildItem(UUID productId, String productName,
+                                         String unitPrice, double quantity, String discount, String store) {
+        return PurchaseItemEntity.builder()
                 .productId(productId)
                 .productName(productName)
                 .unitPrice(new BigDecimal(unitPrice))
@@ -114,8 +112,6 @@ class PurchasePersistenceAdapterItemDetailsIT {
                 .discount(new BigDecimal(discount))
                 .storeName(store)
                 .build();
-        item.setPurchase(purchase);
-        em.persist(item);
     }
 
     @Test
