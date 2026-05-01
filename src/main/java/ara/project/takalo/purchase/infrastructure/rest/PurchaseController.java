@@ -38,6 +38,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -114,6 +115,23 @@ public class PurchaseController {
         Purchase purchase = purchaseWebMapper.toDomain(request);
         Purchase update = service.update(id, purchase);
         return ResponseEntity.ok(purchaseWebMapper.toResponse(update));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyAuthority('PERM_purchase:read:own', 'PERM_purchase:read:any')")
+    @Operation(summary = "Supprimer un achat",
+            description = "Supprime l'achat et toutes ses lignes. " +
+                    "Les utilisateurs avec :read:own ne peuvent supprimer que leurs propres achats.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Achat supprimé"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé (achat appartenant à un autre utilisateur)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Achat introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public void delete(@Parameter(description = "Identifiant de l'achat") @PathVariable UUID id) {
+        service.delete(id);
     }
 
     @GetMapping("/{id}")
