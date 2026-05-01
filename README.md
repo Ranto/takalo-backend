@@ -366,7 +366,158 @@ Comme en dev (cf. §2.5) : se connecter en SQL et insérer une ligne dans `user_
 
 ---
 
-## 8. Dépannage
+## 8. Déploiement Docker via GHCR + Caddy
+
+Approche alternative à §7 : le backend est packagé en image Docker, publiée sur **GitHub Container Registry (GHCR)**, puis tirée sur un VPS où **Caddy** (installé nativement) sert de reverse proxy TLS pour plusieurs applications.
+
+Fichiers fournis à la racine du backend :
+- `Dockerfile` — build multi-stage Maven → JRE 21
+- `docker-compose.prod.yml` — stack serveur (postgres + keycloak + app), ports en `127.0.0.1` uniquement
+- `.env.prod.example` — template à copier en `.env` sur le serveur
+- `.dockerignore`
+
+### 8.1 Pré-requis VPS
+
+- Docker 24+ et Docker Compose v2 (`docker compose`)
+- Caddy installé nativement (`apt install caddy` ou binaire officiel)
+- Sous-domaines `api.takalo.ranto.ovh` et `auth.takalo.ranto.ovh` pointés sur l'IP du VPS (DNS OVH)
+
+### 8.2 Créer le GitHub Container Registry (une seule fois)
+
+GHCR est l'équivalent GitHub du Container Registry GitLab. Pas de "création" explicite : il suffit de pousser une image taggée `ghcr.io/<user>/<image>:<tag>`, et le package apparaît sous l'onglet **Packages** du compte GitHub.
+
+1. **Créer un Personal Access Token (classic)** sur GitHub :
+   - `Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic)`
+   - Nom : `ghcr-takalo`, expiration au choix
+   - Cocher **`write:packages`** (inclut automatiquement `read:packages`)
+   - Copier le token (visible une seule fois)
+
+2. **Login Docker en local** (machine de build) :
+
+   ```bash
+   echo "<TOKEN>" | docker login ghcr.io -u <ton-user-github> --password-stdin
+   ```
+
+3. **Premier build + push** depuis le dossier
+
+   ```bash
+   docker build -t ghcr.io/<ton-user-github>/takalo-backend:latest .
+   docker push ghcr.io/<ton-user-github>/takalo-backend:latest
+   ```
+
+4. **Choisir la visibilité du package** (privé par défaut) : `https://github.com/<user>?tab=packages → takalo-backend → Package settings → Change visibility`.
+   - **Public** : plus simple, pas besoin de login sur le serveur.
+   - **Privé** : plus sûr, nécessite `docker login ghcr.io` sur le VPS.
+
+5. **(Si privé) Login Docker sur le VPS** :
+
+   ```bash
+   echo "<TOKEN>" | docker login ghcr.io -u <ton-user-github> --password-stdin
+   ```
+
+> 💡 **Versioning** : tagger chaque release avec une version en plus de `latest` (`:1.0.0`, `:$(git rev-parse --short HEAD)`) pour pouvoir rollback en changeant simplement `APP_VERSION` dans le `.env` du serveur.
+
+### 8.3 Préparer le serveur (une seule fois)
+
+```bash
+mkdir -p /opt/takalo && cd /opt/takalo
+# Copier docker-compose.prod.yml et .env.prod.example via scp ou git
+cp .env.prod.example .env
+nano .env   # remplir GITHUB_USER, DB_PASSWORD, KEYCLOAK_ADMIN_PASSWORD, …
+```
+
+Variables du `.env` (toutes obligatoires) :
+
+| Variable                  | Description                                            |
+| ------------------------- | ------------------------------------------------------ |
+| `GITHUB_USER`             | propriétaire de l'image GHCR                           |
+| `APP_VERSION`             | tag de l'image (`latest` ou version semver)            |
+| `DB_USER` / `DB_PASSWORD` | credentials PostgreSQL                                 |
+| `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD` | bootstrap admin de Keycloak |
+
+### 8.4 Configurer Caddy
+
+Ajouter à `/etc/caddy/Caddyfile` (à côté des autres sites du VPS) :
+
+```caddy
+api.takalo.ranto.ovh {
+    reverse_proxy 127.0.0.1:8080
+}
+
+auth.takalo.ranto.ovh {
+    reverse_proxy 127.0.0.1:8088
+}
+```
+
+Recharger :
+
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+Caddy provisionne automatiquement les certificats Let's Encrypt. Vérifier d'abord que le DNS résout vers l'IP du VPS, sinon la provision TLS échouera.
+
+### 8.5 Premier démarrage
+
+```bash
+cd /opt/takalo
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml logs -f app
+```
+
+Au premier boot, l'app **échouera** : le realm `takalo` n'existe pas encore dans Keycloak, donc l'`issuer-uri` est introuvable. C'est attendu — faire le setup Keycloak ci-dessous puis redémarrer l'app.
+
+### 8.6 Setup Keycloak (nouvelle instance)
+
+Ouvrir `https://auth.takalo.ranto.ovh` (login : credentials admin du `.env`), puis suivre la procédure §2.3 (création du realm `takalo`, du client `takalo-frontend`, …) — adapter les redirect URIs au domaine de prod :
+
+- Valid redirect URIs : `https://takalo.ranto.ovh/auth/callback`, `https://takalo.ranto.ovh/silent-refresh.html`
+- Valid post logout redirect URIs : `https://takalo.ranto.ovh/`
+- Web origins : `https://takalo.ranto.ovh`
+
+Puis redémarrer l'app :
+
+```bash
+docker compose -f docker-compose.prod.yml restart app
+```
+
+Bootstrap du premier admin : cf. §2.5 — en prod, exécuter le `INSERT` via :
+
+```bash
+docker exec -it takalo-db psql -U <DB_USER> -d takalo_db
+```
+
+### 8.7 Workflow de mise à jour (déploiements suivants)
+
+En local après chaque release :
+
+```bash
+docker build -t ghcr.io/<user>/takalo-backend:latest .
+docker push ghcr.io/<user>/takalo-backend:latest
+```
+
+Sur le serveur :
+
+```bash
+cd /opt/takalo
+docker compose -f docker-compose.prod.yml pull app
+docker compose -f docker-compose.prod.yml up -d app
+```
+
+Caddy reste intouché. Postgres et Keycloak ne sont rebuildés que si tu changes leur version d'image dans `docker-compose.prod.yml`.
+
+### 8.8 Pièges classiques
+
+- **Keycloak derrière proxy** — `KC_HOSTNAME` + `KC_PROXY_HEADERS=xforwarded` sont obligatoires (déjà présents dans `docker-compose.prod.yml`). L'`issuer-uri` envoyé dans les JWT doit **exactement** matcher l'URL publique, sinon le backend rejette les tokens.
+- **`start-dev` Keycloak** — non officiellement supporté en prod (pas optimisé). Pour un usage perso ça passe ; pour du sérieux, basculer sur `start --optimized` après un build préalable.
+- **Postgres non exposé à Internet** — vérifier `docker ps` : le mapping doit afficher `5432/tcp` sans `0.0.0.0:`. Idem keycloak/app : `127.0.0.1:8080->8080/tcp`.
+- **Migrations Flyway** — `baseline-on-migrate=false` en prod : Flyway refuse de démarrer si la DB existe avec un schéma divergent.
+
+---
+
+## 9. Dépannage
 
 | Symptôme                                                            | Piste                                                                                          |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -378,7 +529,7 @@ Comme en dev (cf. §2.5) : se connecter en SQL et insérer une ligne dans `user_
 
 ---
 
-## 9. Liens utiles
+## 10. Liens utiles
 
 - Swagger UI : http://localhost:8080/swagger-ui.html
 - OpenAPI JSON : http://localhost:8080/v3/api-docs

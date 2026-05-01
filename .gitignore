@@ -33,3 +33,8 @@ build/
 .vscode/
 .claude/
 plan/
+
+### Local env files (contiennent des secrets) ###
+.env
+.env.local
+.env.prod

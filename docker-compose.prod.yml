@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: takalo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: takalo_db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - takalo-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: takalo-keycloak
+    restart: unless-stopped
+    command:
+      - start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME: https://auth.takalo.ranto.ovh
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8088:8080"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+    networks:
+      - takalo-network
+
+  app:
+    image: ghcr.io/${GITHUB_USER}/takalo-backend:${APP_VERSION:-latest}
+    container_name: takalo-app
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - keycloak
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/takalo_db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KEYCLOAK_ISSUER_URI: https://auth.takalo.ranto.ovh/realms/takalo
+      APP_CORS_ALLOWED_ORIGINS: https://takalo.ranto.ovh
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - takalo-network
+
+volumes:
+  pgdata:
+  keycloak-data:
+
+networks:
+  takalo-network:
+    driver: bridge
