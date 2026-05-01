@@ -25,14 +25,14 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
     @Query(
             value = """
         SELECT p FROM PurchaseEntity p
-        WHERE (:startDate IS NULL OR p.purchaseDate >= :startDate)
-          AND (:endDate IS NULL OR p.purchaseDate <= :endDate)
+        WHERE p.purchaseDate >= COALESCE(:startDate, p.purchaseDate)
+          AND p.purchaseDate <= COALESCE(:endDate, p.purchaseDate)
         ORDER BY p.purchaseDate DESC
         """,
             countQuery = """
         SELECT COUNT(p) FROM PurchaseEntity p
-        WHERE (:startDate IS NULL OR p.purchaseDate >= :startDate)
-          AND (:endDate IS NULL OR p.purchaseDate <= :endDate)
+        WHERE p.purchaseDate >= COALESCE(:startDate, p.purchaseDate)
+          AND p.purchaseDate <= COALESCE(:endDate, p.purchaseDate)
         """
     )
     @EntityGraph(attributePaths = "items")
@@ -46,15 +46,15 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
             value = """
         SELECT p FROM PurchaseEntity p
         WHERE p.ownerId = :ownerId
-          AND (:startDate IS NULL OR p.purchaseDate >= :startDate)
-          AND (:endDate IS NULL OR p.purchaseDate <= :endDate)
+          AND p.purchaseDate >= COALESCE(:startDate, p.purchaseDate)
+          AND p.purchaseDate <= COALESCE(:endDate, p.purchaseDate)
         ORDER BY p.purchaseDate DESC
         """,
             countQuery = """
         SELECT COUNT(p) FROM PurchaseEntity p
         WHERE p.ownerId = :ownerId
-          AND (:startDate IS NULL OR p.purchaseDate >= :startDate)
-          AND (:endDate IS NULL OR p.purchaseDate <= :endDate)
+          AND p.purchaseDate >= COALESCE(:startDate, p.purchaseDate)
+          AND p.purchaseDate <= COALESCE(:endDate, p.purchaseDate)
         """
     )
     @EntityGraph(attributePaths = "items")
