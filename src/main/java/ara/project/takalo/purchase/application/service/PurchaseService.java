@@ -3,10 +3,12 @@ package ara.project.takalo.purchase.application.service;
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
+import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItem;
+import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
 import ara.project.takalo.shared.domain.exception.ForbiddenException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
@@ -52,9 +54,14 @@ public class PurchaseService implements PurchaseServicePort {
     @Override
     public Purchase update(UUID id, Purchase purchase) {
         return repository.findById(id).map(existing -> {
-            Purchase withOwner = purchase.withOwner(existing.ownerId())
-                    .withBudget(existing.budgetId());
-            Purchase purchaseToSave = getPurchaseWithProductName(withOwner);
+            Purchase merged = new Purchase(
+                    existing.id(),
+                    existing.ownerId(),
+                    existing.budgetId(),
+                    purchase.purchaseDate(),
+                    purchase.items()
+            );
+            Purchase purchaseToSave = getPurchaseWithProductName(merged);
             return repository.save(purchaseToSave);
         }).orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
     }
@@ -89,6 +96,15 @@ public class PurchaseService implements PurchaseServicePort {
             return repository.findByDateRange(start, end, page, limit);
         }
         return repository.findByDateRangeAndOwner(start, end, currentUserProvider.id(), page, limit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<PurchaseItemDetail> searchItemDetails(PurchaseItemDetailQuery query) {
+        UUID ownerFilter = currentUserProvider.hasAuthority(PERM_READ_ANY)
+                ? null
+                : currentUserProvider.id();
+        return repository.searchItemDetails(query, ownerFilter);
     }
 
     @Override

@@ -3,9 +3,11 @@ package ara.project.takalo.purchase.application.service;
 import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
+import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItem;
+import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
 import ara.project.takalo.shared.domain.exception.ForbiddenException;
 import ara.project.takalo.shared.domain.exception.ResourceNotFoundException;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
@@ -112,6 +114,7 @@ class PurchaseServiceTest {
 
         ArgumentCaptor<Purchase> captor = ArgumentCaptor.forClass(Purchase.class);
         verify(repository).save(captor.capture());
+        assertThat(captor.getValue().id()).isEqualTo(id);
         assertThat(captor.getValue().ownerId()).isEqualTo(owner);
         assertThat(captor.getValue().items().getFirst().productName()).isEqualTo("Lait");
         assertThat(result).isSameAs(saved);
@@ -356,6 +359,40 @@ class PurchaseServiceTest {
         when(repository.findByDateRange(start, end, 0, 10)).thenReturn(page);
 
         PagedResponse<Purchase> result = service.search(start, end, 0, 10);
+
+        assertThat(result).isSameAs(page);
+    }
+
+    @Test
+    void searchItemDetails_withReadAny_passesNullOwner() {
+        PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
+                null, null, null, null,
+                PurchaseItemDetailQuery.SortField.DATE,
+                PurchaseItemDetailQuery.SortDirection.DESC,
+                0, 10);
+        PagedResponse<PurchaseItemDetail> page = new PagedResponse<>(List.of(), 0, 10, 0L, 0, true);
+        when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(true);
+        when(repository.searchItemDetails(q, null)).thenReturn(page);
+
+        PagedResponse<PurchaseItemDetail> result = service.searchItemDetails(q);
+
+        assertThat(result).isSameAs(page);
+    }
+
+    @Test
+    void searchItemDetails_withReadOwnOnly_filtersByCurrentUser() {
+        UUID currentUser = UUID.randomUUID();
+        PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
+                null, null, "lait", "produits laitiers",
+                PurchaseItemDetailQuery.SortField.PRODUCT,
+                PurchaseItemDetailQuery.SortDirection.ASC,
+                0, 10);
+        PagedResponse<PurchaseItemDetail> page = new PagedResponse<>(List.of(), 0, 10, 0L, 0, true);
+        when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(false);
+        when(currentUserProvider.id()).thenReturn(currentUser);
+        when(repository.searchItemDetails(q, currentUser)).thenReturn(page);
+
+        PagedResponse<PurchaseItemDetail> result = service.searchItemDetails(q);
 
         assertThat(result).isSameAs(page);
     }

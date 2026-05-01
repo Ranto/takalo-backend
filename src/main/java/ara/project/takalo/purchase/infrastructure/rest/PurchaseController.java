@@ -1,6 +1,7 @@
 package ara.project.takalo.purchase.infrastructure.rest;
 
 import ara.project.takalo.purchase.application.port.in.PurchaseImportServicePort;
+import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
 import ara.project.takalo.user.application.port.in.UserDefaultBudgetServicePort;
@@ -9,12 +10,15 @@ import ara.project.takalo.purchase.domain.exception.UnsupportedImportFormatExcep
 import ara.project.takalo.purchase.domain.model.ImportFormat;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseImportResult;
+import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseImportResponse;
+import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseItemDetailResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseLightResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseRequest;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.ReassignPurchaseBudgetRequest;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseImportWebMapper;
+import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseItemDetailWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseLightWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseWebMapper;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
@@ -63,6 +67,7 @@ public class PurchaseController {
     private final PurchaseImportServicePort importService;
     private final PurchaseWebMapper purchaseWebMapper;
     private final PurchaseLightWebMapper purchaseLightWebMapper;
+    private final PurchaseItemDetailWebMapper purchaseItemDetailWebMapper;
     private final PurchaseImportWebMapper purchaseImportWebMapper;
     private final UserDefaultBudgetServicePort defaultBudgetService;
     private final CurrentUserProvider currentUserProvider;
@@ -146,6 +151,73 @@ public class PurchaseController {
             @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
         PagedResponse<Purchase> result = service.search(start, end, page, size);
         return result.map(purchaseLightWebMapper::toResponse);
+    }
+
+    @GetMapping("/items")
+    @PreAuthorize("hasAnyAuthority('PERM_purchase:read:own', 'PERM_purchase:read:any')")
+    @Operation(summary = "Lister les lignes d'achat (vue détaillée)",
+            description = "Recherche paginée des lignes d'achats confondus, avec date, produit, catégorie, " +
+                    "prix unitaire, quantité, remise, total et magasin. Filtres : intervalle de date, nom du produit, " +
+                    "nom de la catégorie. Tri : date (défaut), produit, catégorie. Les utilisateurs avec :read:own " +
+                    "ne voient que leurs propres lignes.")
+    public PagedResponse<PurchaseItemDetailResponse> searchItemDetails(
+            @Parameter(description = "Date de début (ISO-8601, inclusif)")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            Instant start,
+
+            @Parameter(description = "Date de fin (ISO-8601, inclusif)")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            Instant end,
+
+            @Parameter(description = "Filtre partiel sur le nom du produit (insensible à la casse)")
+            @RequestParam(required = false) String productName,
+
+            @Parameter(description = "Filtre partiel sur le libellé de la catégorie (insensible à la casse)")
+            @RequestParam(required = false) String categoryName,
+
+            @Parameter(description = "Champ de tri : date | product | category", example = "date")
+            @RequestParam(defaultValue = "date") String sort,
+
+            @Parameter(description = "Sens de tri : asc | desc", example = "desc")
+            @RequestParam(required = false) String direction,
+
+            @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
+
+        PurchaseItemDetailQuery.SortField sortField = parseSort(sort);
+        PurchaseItemDetailQuery.SortDirection dir = parseDirection(direction, sortField);
+        PurchaseItemDetailQuery query = new PurchaseItemDetailQuery(
+                start, end, productName, categoryName, sortField, dir, page, size);
+        PagedResponse<PurchaseItemDetail> result = service.searchItemDetails(query);
+        return result.map(purchaseItemDetailWebMapper::toResponse);
+    }
+
+    private PurchaseItemDetailQuery.SortField parseSort(String sort) {
+        if (sort == null) return PurchaseItemDetailQuery.SortField.DATE;
+        return switch (sort.trim().toLowerCase()) {
+            case "product" -> PurchaseItemDetailQuery.SortField.PRODUCT;
+            case "category" -> PurchaseItemDetailQuery.SortField.CATEGORY;
+            case "date", "" -> PurchaseItemDetailQuery.SortField.DATE;
+            default -> throw new ara.project.takalo.shared.domain.exception.InvalidOperationException(
+                    "Tri invalide. Valeurs acceptées : date, product, category");
+        };
+    }
+
+    private PurchaseItemDetailQuery.SortDirection parseDirection(
+            String direction, PurchaseItemDetailQuery.SortField sortField) {
+        if (direction == null || direction.isBlank()) {
+            return sortField == PurchaseItemDetailQuery.SortField.DATE
+                    ? PurchaseItemDetailQuery.SortDirection.DESC
+                    : PurchaseItemDetailQuery.SortDirection.ASC;
+        }
+        return switch (direction.trim().toLowerCase()) {
+            case "asc" -> PurchaseItemDetailQuery.SortDirection.ASC;
+            case "desc" -> PurchaseItemDetailQuery.SortDirection.DESC;
+            default -> throw new ara.project.takalo.shared.domain.exception.InvalidOperationException(
+                    "Sens de tri invalide. Valeurs acceptées : asc, desc");
+        };
     }
 
     @PatchMapping("/{id}/budget")

@@ -5,6 +5,7 @@ import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItem;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseImportWebMapper;
+import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseItemDetailWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseItemWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseLightWebMapper;
 import ara.project.takalo.purchase.infrastructure.rest.mapper.PurchaseWebMapper;
@@ -41,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(PurchaseController.class)
 @Import({PurchaseWebMapper.class, PurchaseItemWebMapper.class, PurchaseLightWebMapper.class,
-        PurchaseImportWebMapper.class})
+        PurchaseImportWebMapper.class, PurchaseItemDetailWebMapper.class})
 class PurchaseControllerTest {
 
     @Autowired

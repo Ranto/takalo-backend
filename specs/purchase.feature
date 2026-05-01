@@ -403,3 +403,103 @@ Fonctionnalité: Gestion des achats
     Quand "alice" clique sur "Enregistrer"
     Alors "alice" est redirigée vers la page de connexion
     Et un message "Votre session a expiré, veuillez vous reconnecter" s'affiche
+
+  # ---------------------------------------------------------------------------
+  # Vue détaillée des lignes d'achats (filtres + tri)
+  # Endpoint backend : GET /api/v1/purchases/items
+  # Colonnes : date, produit, catégorie, prix unitaire, quantité, remise, total, magasin.
+  # ---------------------------------------------------------------------------
+  Scénario: 53 - Afficher les lignes d'achats triées par date décroissante par défaut
+    Étant donné les achats suivants existent pour "alice":
+      | Date       | Produit       | Catégorie         | Prix unitaire | Quantité | Remise | Magasin   |
+      | 2026-01-10 | Pain de mie   | Boulangerie       | 1.50          | 1        | 0.00   | Carrefour |
+      | 2026-04-20 | Yaourt nature | Produits laitiers | 2.10          | 3        | 0.30   | Leclerc   |
+    Quand "alice" ouvre la page "Lignes d'achats"
+    Alors un tableau s'affiche avec les colonnes "Date", "Produit", "Catégorie", "Prix unitaire", "Quantité", "Remise", "Total", "Magasin"
+    Et la première ligne du tableau correspond à l'achat du "2026-04-20"
+    Et la colonne "Total" de la première ligne affiche "6.00"
+    Et la deuxième ligne du tableau correspond à l'achat du "2026-01-10"
+
+  Scénario: 54 - Trier les lignes par produit
+    Étant donné des lignes d'achats existent pour "alice"
+    Quand "alice" clique sur l'en-tête de colonne "Produit"
+    Alors les lignes sont triées par nom de produit en ordre croissant
+    Et un indicateur de tri ascendant est visible sur la colonne "Produit"
+    Quand "alice" clique à nouveau sur l'en-tête "Produit"
+    Alors les lignes sont triées par nom de produit en ordre décroissant
+
+  Scénario: 55 - Trier les lignes par catégorie
+    Étant donné des lignes d'achats existent pour "alice" portant sur les catégories "Boulangerie" et "Produits laitiers"
+    Quand "alice" clique sur l'en-tête de colonne "Catégorie"
+    Alors les lignes "Boulangerie" apparaissent avant les lignes "Produits laitiers"
+
+  Scénario: 56 - Filtrer les lignes par intervalle de dates
+    Étant donné des lignes d'achats existent pour "alice" entre "2026-01-01" et "2026-04-30"
+    Quand "alice" saisit "2026-04-01" dans le champ "Du"
+    Et "alice" saisit "2026-04-30" dans le champ "Au"
+    Et "alice" valide les filtres
+    Alors seules les lignes dont la date d'achat est comprise entre "2026-04-01" et "2026-04-30" sont affichées
+
+  Scénario: 57 - Filtrer les lignes par nom de produit (insensible à la casse)
+    Étant donné des lignes d'achats existent avec les produits "Yaourt nature" et "Pain de mie"
+    Quand "alice" saisit "yaourt" dans le champ "Produit"
+    Et "alice" valide les filtres
+    Alors toutes les lignes affichées contiennent "Yaourt" dans la colonne "Produit"
+    Et aucune ligne "Pain de mie" n'est affichée
+
+  Scénario: 58 - Filtrer les lignes par nom de catégorie
+    Étant donné des lignes d'achats existent dans les catégories "Boulangerie" et "Produits laitiers"
+    Quand "alice" saisit "laitiers" dans le champ "Catégorie"
+    Et "alice" valide les filtres
+    Alors toutes les lignes affichées appartiennent à la catégorie "Produits laitiers"
+
+  Scénario: 59 - Combiner plusieurs filtres
+    Étant donné des lignes d'achats variées existent pour "alice"
+    Quand "alice" saisit "lait" dans le champ "Produit"
+    Et "alice" saisit "2026-04-01" dans le champ "Du"
+    Et "alice" valide les filtres
+    Alors les lignes affichées correspondent au produit recherché ET à la fenêtre temporelle
+
+  Scénario: 60 - Pagination des lignes d'achats
+    Étant donné 25 lignes d'achats existent pour "alice"
+    Quand "alice" ouvre la page "Lignes d'achats"
+    Alors 10 lignes sont affichées
+    Et un contrôle de pagination indique 3 pages
+    Quand "alice" clique sur "Page suivante"
+    Alors les lignes 11 à 20 sont affichées
+
+  Scénario: 61 - Afficher la catégorie courante (et non figée) du produit
+    Étant donné un achat "alice" avec un article "Yaourt nature" rattaché à la catégorie "Produits laitiers"
+    Et la catégorie du produit "Yaourt nature" est renommée en "Frais"
+    Quand "alice" ouvre la page "Lignes d'achats"
+    Alors la ligne correspondante affiche "Frais" dans la colonne "Catégorie"
+
+  Scénario: 62 - Afficher une ligne dont le produit a été supprimé
+    Étant donné un achat de "alice" avec un article "Yaourt nature" dont le produit a été supprimé
+    Quand "alice" ouvre la page "Lignes d'achats"
+    Alors la ligne affiche "Yaourt nature" (snapshot) dans la colonne "Produit"
+    Et la colonne "Catégorie" est vide
+
+  Scénario: 63 - Un utilisateur "purchase:read:own" ne voit que ses propres lignes
+    Étant donné un utilisateur "bob" avec uniquement la permission "purchase:read:own"
+    Et des lignes d'achats existent pour "alice" et pour "bob"
+    Quand "bob" ouvre la page "Lignes d'achats"
+    Alors seules les lignes des achats de "bob" sont affichées
+
+  Scénario: 64 - Un utilisateur "purchase:read:any" voit toutes les lignes
+    Étant donné un utilisateur "carol" avec la permission "purchase:read:any"
+    Et des lignes d'achats existent pour "alice" et pour "bob"
+    Quand "carol" ouvre la page "Lignes d'achats"
+    Alors les lignes de "alice" et celles de "bob" sont affichées
+
+  Scénario: 65 - Calcul du total par ligne (prix unitaire * quantité - remise)
+    Étant donné une ligne d'achat avec prix unitaire 2.10, quantité 3 et remise 0.30
+    Quand "alice" ouvre la page "Lignes d'achats"
+    Alors la colonne "Total" de cette ligne affiche "6.00"
+
+  Scénario: 66 - Aucune ligne ne correspond aux filtres
+    Étant donné des lignes d'achats existent pour "alice"
+    Quand "alice" saisit "produit-inexistant-xyz" dans le champ "Produit"
+    Et "alice" valide les filtres
+    Alors un message "Aucune ligne ne correspond aux critères" s'affiche
+    Et le tableau est vide

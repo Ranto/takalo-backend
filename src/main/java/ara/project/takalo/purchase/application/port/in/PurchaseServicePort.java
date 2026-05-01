@@ -1,6 +1,7 @@
 package ara.project.takalo.purchase.application.port.in;
 
 import ara.project.takalo.purchase.domain.model.Purchase;
+import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 
 import java.time.Instant;
@@ -18,6 +19,8 @@ public interface PurchaseServicePort {
     Purchase getById(UUID id);
 
     PagedResponse<Purchase> search(Instant start, Instant end, int page, int limit);
+
+    PagedResponse<PurchaseItemDetail> searchItemDetails(PurchaseItemDetailQuery query);
 
     Purchase reassignBudget(UUID purchaseId, UUID newBudgetId, Instant date, String raison);
 
