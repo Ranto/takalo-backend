@@ -1,6 +1,7 @@
 package ara.project.takalo.user.infrastructure.security;
 
 import ara.project.takalo.user.application.port.in.UserServicePort;
+import ara.project.takalo.user.application.port.out.PermissionRepository;
 import ara.project.takalo.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.convert.converter.Converter;
@@ -22,7 +23,10 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
+    private static final String SUPER_ADMIN_ROLE = "SUPER_ADMIN";
+
     private final UserServicePort userServicePort;
+    private final PermissionRepository permissionRepository;
 
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
@@ -40,6 +44,11 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         }
         for (String perm : user.permissionNames()) {
             authorities.add(new SimpleGrantedAuthority("PERM_" + perm));
+        }
+        if (user.roleNames().contains(SUPER_ADMIN_ROLE)) {
+            for (String perm : permissionRepository.findAllNames()) {
+                authorities.add(new SimpleGrantedAuthority("PERM_" + perm));
+            }
         }
 
         AuthenticatedUser principal = new AuthenticatedUser(
