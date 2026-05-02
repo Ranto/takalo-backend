@@ -379,8 +379,8 @@ Fichiers fournis à la racine du backend :
 ### 8.1 Pré-requis VPS
 
 - Docker 24+ et Docker Compose v2 (`docker compose`)
-- Caddy installé nativement (`apt install caddy` ou binaire officiel)
-- Sous-domaines `api.takalo.ranto.ovh` et `auth.takalo.ranto.ovh` pointés sur l'IP du VPS (DNS OVH)
+- Caddy déployé en conteneur Docker (sa propre stack `compose`, à côté de la stack Takalo). Caddy rejoint le réseau `takalo-network` en *external* pour atteindre `app` et `keycloak` via le DNS Docker. Détails au §8.4.
+- Sous-domaines `takalo.ranto.ovh`, `api.takalo.ranto.ovh` et `auth.takalo.ranto.ovh` pointés sur l'IP du VPS (DNS OVH)
 
 ### 8.2 Créer le GitHub Container Registry (une seule fois)
 
@@ -428,41 +428,95 @@ nano .env   # remplir GITHUB_USER, DB_PASSWORD, KEYCLOAK_ADMIN_PASSWORD, …
 
 Variables du `.env` (toutes obligatoires) :
 
-| Variable                  | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `GITHUB_USER`             | propriétaire de l'image GHCR                           |
-| `APP_VERSION`             | tag de l'image (`latest` ou version semver)            |
-| `DB_USER` / `DB_PASSWORD` | credentials PostgreSQL                                 |
-| `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD` | bootstrap admin de Keycloak |
+| Variable                                            | Description                                                              |
+| --------------------------------------------------- | ------------------------------------------------------------------------ |
+| `GITHUB_USER`                                       | propriétaire de l'image GHCR                                             |
+| `APP_VERSION`                                       | tag de l'image (`latest` ou version semver)                              |
+| `DB_USER` / `DB_PASSWORD`                           | credentials PostgreSQL (base `takalo_db`)                                |
+| `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD`   | bootstrap admin de Keycloak                                              |
+| `KEYCLOAK_DB_USER` / `KEYCLOAK_DB_PASSWORD`         | credentials PostgreSQL pour la base `keycloak_db` (utilisateur dédié)    |
 
-### 8.4 Configurer Caddy
+### 8.4 Configurer Caddy (Docker)
 
-Ajouter à `/etc/caddy/Caddyfile` (à côté des autres sites du VPS) :
+Caddy tourne dans son propre conteneur, géré par une stack `compose` séparée (typiquement `/opt/caddy/`), pour pouvoir mutualiser un seul reverse proxy entre Takalo et d'autres applications du VPS.
+
+**`/opt/caddy/docker-compose.yml`** (extrait minimal) :
+
+```yaml
+services:
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - takalo-network
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+networks:
+  takalo-network:
+    external: true   # créé par la stack Takalo (docker-compose.prod.yml)
+```
+
+**`/opt/caddy/Caddyfile`** :
 
 ```caddy
 api.takalo.ranto.ovh {
-    reverse_proxy 127.0.0.1:8080
+    reverse_proxy app:8080
 }
 
 auth.takalo.ranto.ovh {
-    reverse_proxy 127.0.0.1:8088
+    reverse_proxy keycloak:8080
 }
 ```
 
-Recharger :
+> ℹ️ Comme Caddy partage le réseau `takalo-network` avec les autres services, il résout `app` et `keycloak` via le DNS Docker (noms de service) — plus besoin d'exposer leurs ports sur `127.0.0.1` côté hôte. Les bindings `127.0.0.1:8080` / `127.0.0.1:8088` du `docker-compose.prod.yml` ne sont alors utiles que pour du debug local (`curl 127.0.0.1:8080/actuator/health`) et peuvent être retirés.
+
+Démarrer / recharger :
 
 ```bash
-sudo caddy validate --config /etc/caddy/Caddyfile
-sudo systemctl reload caddy
+# Premier démarrage
+cd /opt/caddy
+docker compose up -d
+
+# Recharger après modification du Caddyfile (sans downtime)
+docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+# Valider la syntaxe avant rechargement
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
 ```
 
-Caddy provisionne automatiquement les certificats Let's Encrypt. Vérifier d'abord que le DNS résout vers l'IP du VPS, sinon la provision TLS échouera.
+Caddy provisionne automatiquement les certificats Let's Encrypt et les stocke dans le volume `caddy-data` (à sauvegarder). Vérifier d'abord que le DNS résout vers l'IP du VPS, sinon la provision TLS échouera.
 
 ### 8.5 Premier démarrage
+
+Keycloak utilise PostgreSQL (base `keycloak_db`, user dédié `KEYCLOAK_DB_USER`) — pas H2. Il faut créer la base et le user **avant** le premier `up -d`, sinon Keycloak ne démarrera pas. Démarrer d'abord uniquement Postgres :
 
 ```bash
 cd /opt/takalo
 docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d postgres
+
+# Créer le user et la base Keycloak (remplacer les valeurs par celles du .env)
+docker exec -i takalo-db psql -U "$DB_USER" -d takalo_db <<SQL
+CREATE USER ${KEYCLOAK_DB_USER} WITH PASSWORD '${KEYCLOAK_DB_PASSWORD}';
+CREATE DATABASE keycloak_db OWNER ${KEYCLOAK_DB_USER};
+SQL
+```
+
+Puis lancer le reste de la stack :
+
+```bash
 docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml logs -f app
 ```
@@ -508,7 +562,113 @@ docker compose -f docker-compose.prod.yml up -d app
 
 Caddy reste intouché. Postgres et Keycloak ne sont rebuildés que si tu changes leur version d'image dans `docker-compose.prod.yml`.
 
-### 8.8 Pièges classiques
+### 8.9 Headers de sécurité Caddy
+
+Caddy peut ajouter en bordure une couche de headers HTTP de sécurité (HSTS, CSP, Permissions-Policy, …) pour durcir l'application sans toucher au backend. Comme la stack expose **trois domaines distincts** (front, API, Keycloak) qui n'ont pas les mêmes contraintes, on définit trois snippets.
+
+| Domaine                   | Ce qu'il sert         | Politique                                                                                |
+| ------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| `takalo.ranto.ovh`        | Angular SPA (HTML/JS) | **CSP complète** — c'est là que les XSS sont une menace réelle                           |
+| `api.takalo.ranto.ovh`    | JSON Spring Boot      | Headers de base seulement (HSTS, nosniff, COOP/CORP). Pas besoin de CSP stricte          |
+| `auth.takalo.ranto.ovh`   | UI Keycloak           | **Ne pas imposer de CSP depuis Caddy** — Keycloak gère sa propre CSP par realm           |
+
+> ⚠️ Coller la CSP du frontend sur `auth.takalo.ranto.ovh` casse les pages de login Keycloak (templates Freemarker avec scripts/styles inline). Sur l'API, une CSP stricte est inutile : CSP s'applique au rendu HTML par le navigateur, pas aux réponses JSON consommées par `fetch`.
+
+À ajouter dans `/opt/caddy/Caddyfile` (le fichier monté en volume read-only sur le conteneur Caddy, cf. §8.4) :
+
+```caddy
+# ----- Snippets réutilisables -----
+
+(security_base) {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
+
+(security_frontend) {
+    import security_base
+    header {
+        X-Frame-Options "DENY"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.takalo.ranto.ovh https://auth.takalo.ranto.ovh; frame-src https://auth.takalo.ranto.ovh; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
+        Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()"
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Resource-Policy "same-origin"
+    }
+}
+
+(security_api) {
+    import security_base
+    header {
+        X-Frame-Options "DENY"
+        Cross-Origin-Resource-Policy "same-site"
+    }
+}
+
+# ----- Sites -----
+
+takalo.ranto.ovh {
+    import security_frontend
+    encode gzip zstd
+    root * /srv/takalo-frontend
+    try_files {path} /index.html
+    file_server
+}
+
+api.takalo.ranto.ovh {
+    import security_api
+    encode gzip zstd
+    reverse_proxy app:8080
+}
+
+auth.takalo.ranto.ovh {
+    import security_base
+    encode gzip zstd
+    reverse_proxy keycloak:8080
+}
+```
+
+#### Détail des directives CSP du frontend
+
+- `default-src 'self'` — fallback : tout ce qui n'est pas surchargé doit venir du domaine frontend.
+- `script-src 'self'` — pas d'`'unsafe-inline'`, pas d'`'unsafe-eval'`. Angular en build prod n'en a plus besoin. Si une violation apparaît, c'est un script inline qui traîne dans `index.html` — corriger côté code plutôt que d'assouplir la CSP.
+- `style-src 'self' 'unsafe-inline'` — Angular injecte des styles inline pour les composants. `'unsafe-inline'` pour les styles est largement moins risqué que pour les scripts (pas d'exécution de code).
+- `connect-src 'self' https://api.takalo.ranto.ovh https://auth.takalo.ranto.ovh` — fetch/XHR autorisés vers l'API REST **et** Keycloak (discovery doc, JWKS, token endpoint, userinfo). Sans ces deux origines, `angular-oauth2-oidc` plante au démarrage.
+- `frame-src https://auth.takalo.ranto.ovh` — autorise l'iframe utilisée par `silent-refresh.html` pour le renouvellement de token muet.
+- `frame-ancestors 'none'` — équivalent moderne et plus précis de `X-Frame-Options: DENY`. Garder les deux ne pose pas de problème.
+- `form-action 'self'` — empêche un attaquant XSS d'injecter un `<form action="https://evil/">` qui exfiltre des données saisies.
+- `base-uri 'self'` — bloque l'injection d'un `<base>` qui détournerait toutes les URLs relatives.
+- `object-src 'none'` — pas de `<object>`/`<embed>`/Flash. Devrait toujours être à `'none'`.
+- `upgrade-insecure-requests` — réécrit automatiquement les éventuelles URLs `http://` en `https://` dans la page (filet de sécurité, pas une excuse pour laisser du `http://` dans le code).
+
+#### Pourquoi `same-site` (pas `same-origin`) sur l'API
+
+`Cross-Origin-Resource-Policy: same-origin` rendrait l'API inaccessible depuis le SPA car `takalo.ranto.ovh` et `api.takalo.ranto.ovh` sont des **origines** différentes. Elles sont en revanche sur le même **site** (suffixe public commun), donc `same-site` autorise les requêtes cross-origin du frontend tout en bloquant les sites tiers.
+
+#### CSP côté Keycloak
+
+Pour durcir Keycloak, c'est dans **Realm Settings → Security defenses → Headers** dans la console admin, pas dans Caddy. Par défaut Keycloak envoie déjà `frame-src 'self'; frame-ancestors 'self'; object-src 'none';` — adapter `frame-ancestors` à `https://takalo.ranto.ovh` si tu intègres Keycloak en iframe depuis le frontend (cas du silent refresh).
+
+#### Méthodologie de déploiement
+
+1. Démarrer en mode *report-only* d'abord, pour ne rien casser : remplacer `Content-Security-Policy` par `Content-Security-Policy-Report-Only` dans `(security_frontend)`. Les violations sont loggées dans la console du navigateur sans bloquer l'exécution.
+2. Naviguer dans toute l'application pendant 24-48h, vérifier zéro violation.
+3. Repasser sur `Content-Security-Policy` (bloquant).
+4. (Optionnel) Ajouter un `report-uri` ou `report-to` pour centraliser les violations en prod.
+
+#### Recharger Caddy
+
+```bash
+cd /opt/caddy
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
+docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+> ℹ️ Si tu sers le frontend statique (`takalo.ranto.ovh`) directement par Caddy, monte aussi le dossier des assets en volume read-only dans le conteneur Caddy (`./takalo-frontend:/srv/takalo-frontend:ro` à ajouter dans le compose §8.4).
+
+### 8.10 Pièges classiques
 
 - **Keycloak derrière proxy** — `KC_HOSTNAME` + `KC_PROXY_HEADERS=xforwarded` sont obligatoires (déjà présents dans `docker-compose.prod.yml`). L'`issuer-uri` envoyé dans les JWT doit **exactement** matcher l'URL publique, sinon le backend rejette les tokens.
 - **`start-dev` Keycloak** — non officiellement supporté en prod (pas optimisé). Pour un usage perso ça passe ; pour du sérieux, basculer sur `start --optimized` après un build préalable.
