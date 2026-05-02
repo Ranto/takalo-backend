@@ -11,7 +11,9 @@ import ara.project.takalo.purchase.domain.model.ImportError;
 import ara.project.takalo.purchase.domain.model.ImportFormat;
 import ara.project.takalo.purchase.domain.model.ParsedPurchaseRow;
 import ara.project.takalo.purchase.domain.model.Purchase;
+import ara.project.takalo.purchase.domain.model.PurchaseImportPreviewItem;
 import ara.project.takalo.purchase.domain.model.PurchaseImportResult;
+import ara.project.takalo.purchase.domain.model.PurchaseImportValidationResult;
 import ara.project.takalo.purchase.domain.model.PurchaseItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -39,22 +42,18 @@ public class PurchaseImportService implements PurchaseImportServicePort {
 
     @Override
     public PurchaseImportResult importPurchases(InputStream source, ImportFormat format) {
-        PurchaseImportParser parser = parsers.stream()
-                .filter(p -> p.supports(format))
-                .findFirst()
-                .orElseThrow(() -> new UnsupportedImportFormatException(format));
-
-        List<ParsedPurchaseRow> parsedRows = parser.parse(source);
+        List<ParsedPurchaseRow> parsedRows = parseRows(source, format);
 
         List<ImportError> errors = new ArrayList<>();
         Map<LocalDate, List<PurchaseItem>> itemsByDate = new LinkedHashMap<>();
 
         for (ParsedPurchaseRow row : parsedRows) {
             try {
+                validateRowFields(row);
                 PurchaseItem item = parsedRowToPurchaseItem(row);
                 itemsByDate.computeIfAbsent(row.purchaseDate(), d -> new ArrayList<>()).add(item);
             } catch (ImportRowException e) {
-                errors.add(new ImportError(row.lineNumber(), e.rawValue, e.getMessage()));
+                errors.add(new ImportError(row.lineNumber(), e.rawValue, e.getMessage(), row));
             }
         }
 
@@ -74,7 +73,35 @@ public class PurchaseImportService implements PurchaseImportServicePort {
         return new PurchaseImportResult(imported, errors);
     }
 
-    private PurchaseItem parsedRowToPurchaseItem(ParsedPurchaseRow row) {
+    @Transactional(readOnly = true)
+    @Override
+    public PurchaseImportValidationResult validate(InputStream source, ImportFormat format) {
+        List<ParsedPurchaseRow> parsedRows = parseRows(source, format);
+
+        List<ImportError> errors = new ArrayList<>();
+        List<PurchaseImportPreviewItem> validRows = new ArrayList<>();
+
+        for (ParsedPurchaseRow row : parsedRows) {
+            try {
+                validateRowFields(row);
+                validRows.add(toPreviewItem(row));
+            } catch (ImportRowException e) {
+                errors.add(new ImportError(row.lineNumber(), e.rawValue, e.getMessage(), row));
+            }
+        }
+
+        return new PurchaseImportValidationResult(validRows, errors);
+    }
+
+    private List<ParsedPurchaseRow> parseRows(InputStream source, ImportFormat format) {
+        PurchaseImportParser parser = parsers.stream()
+                .filter(p -> p.supports(format))
+                .findFirst()
+                .orElseThrow(() -> new UnsupportedImportFormatException(format));
+        return parser.parse(source);
+    }
+
+    private void validateRowFields(ParsedPurchaseRow row) {
         if (row.purchaseDate() == null) {
             throw new ImportRowException(null, "Date d'achat manquante");
         }
@@ -82,12 +109,14 @@ public class PurchaseImportService implements PurchaseImportServicePort {
             throw new ImportRowException(null, "Nom du produit manquant");
         }
         if (row.quantity() == null || row.quantity() <= 0) {
-            throw new ImportRowException(String.valueOf(row.quantity()), "Quantité invalide");
+            throw new ImportRowException(row.quantity() == null ? null : String.valueOf(row.quantity()), "Quantité invalide");
         }
         if (row.unitPrice() == null || row.unitPrice().signum() < 0) {
-            throw new ImportRowException(String.valueOf(row.unitPrice()), "Prix unitaire invalide");
+            throw new ImportRowException(row.unitPrice() == null ? null : row.unitPrice().toPlainString(), "Prix unitaire invalide");
         }
+    }
 
+    private PurchaseItem parsedRowToPurchaseItem(ParsedPurchaseRow row) {
         UUID productId = productService.findIdByName(row.productName())
                 .orElseGet(() -> createProductFromRow(row));
 
@@ -101,6 +130,28 @@ public class PurchaseImportService implements PurchaseImportServicePort {
                 row.expiryDate(),
                 row.storeName(),
                 row.productName()
+        );
+    }
+
+    private PurchaseImportPreviewItem toPreviewItem(ParsedPurchaseRow row) {
+        Optional<UUID> productId = productService.findIdByName(row.productName());
+        Optional<UUID> categoryId = categoryService.findIdByLabel(row.categoryName());
+        boolean categoryProvided = row.categoryName() != null && !row.categoryName().isBlank();
+
+        BigDecimal discount = row.discount() == null ? BigDecimal.ZERO : row.discount();
+
+        return new PurchaseImportPreviewItem(
+                row.lineNumber(),
+                row.purchaseDate(),
+                row.productName(),
+                productId.orElse(null),
+                productId.isPresent(),
+                row.categoryName(),
+                categoryId.orElse(null),
+                categoryProvided && categoryId.isPresent(),
+                row.quantity(),
+                row.unitPrice(),
+                discount
         );
     }
 

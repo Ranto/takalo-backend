@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -62,6 +63,15 @@ public class ProductCategoryService implements ProductCategoryServicePort {
     @Override
     public Map<UUID, String> getCategoryLabels(Set<UUID> ids) {
         return repository.getCategoryLabels(ids);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Optional<UUID> findIdByLabel(String label) {
+        if (label == null || label.isBlank()) {
+            return Optional.empty();
+        }
+        return repository.findByLabelIgnoreCase(label.trim()).map(ProductCategory::id);
     }
 
     @Override

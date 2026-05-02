@@ -4,6 +4,7 @@ import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,4 +22,6 @@ public interface ProductCategoryServicePort {
     Map<UUID, String> getCategoryLabels(Set<UUID> ids);
 
     ProductCategory findOrCreateByLabel(String label);
+
+    Optional<UUID> findIdByLabel(String label);
 }

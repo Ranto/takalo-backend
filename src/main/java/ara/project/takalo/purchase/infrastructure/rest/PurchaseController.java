@@ -10,8 +10,10 @@ import ara.project.takalo.purchase.domain.exception.UnsupportedImportFormatExcep
 import ara.project.takalo.purchase.domain.model.ImportFormat;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseImportResult;
+import ara.project.takalo.purchase.domain.model.PurchaseImportValidationResult;
 import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseImportResponse;
+import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseImportValidationResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseItemDetailResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseLightResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseRequest;
@@ -274,6 +276,27 @@ public class PurchaseController {
         try (var stream = file.getInputStream()) {
             PurchaseImportResult result = importService.importPurchases(stream, format);
             return purchaseImportWebMapper.toResponse(result);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @PostMapping(value = "/import/validate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('PERM_purchase:import')")
+    @Operation(summary = "Valider un fichier d'import sans persistance",
+            description = "Analyse le fichier et retourne les lignes valides (avec aperçu) et les lignes en erreur, sans rien enregistrer en base.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Validation effectuée"),
+            @ApiResponse(responseCode = "400", description = "Format de fichier non supporté",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public PurchaseImportValidationResponse validateImport(
+            @Parameter(description = "Fichier à valider (.xlsx, .docx, .csv)")
+            @RequestPart("file") MultipartFile file) {
+        ImportFormat format = detectFormat(file);
+        try (var stream = file.getInputStream()) {
+            PurchaseImportValidationResult result = importService.validate(stream, format);
+            return purchaseImportWebMapper.toValidationResponse(result);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
