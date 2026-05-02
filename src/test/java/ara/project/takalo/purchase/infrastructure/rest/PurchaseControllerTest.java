@@ -1,5 +1,6 @@
 package ara.project.takalo.purchase.infrastructure.rest;
 
+import ara.project.takalo.purchase.application.port.in.BulkReassignBudgetResult;
 import ara.project.takalo.purchase.application.port.in.PurchaseImportServicePort;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.domain.model.Purchase;
@@ -35,6 +36,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -248,6 +250,75 @@ class PurchaseControllerTest {
     // JsonNullable correctement enregistré sur l'ObjectMapper du slice WebMvc, ce que
     // @WebMvcTest ne fournit pas pour le moment. À couvrir par un test d'intégration
     // (@SpringBootTest) dans un lot ultérieur.
+
+    @Test
+    void reassignBudgetBulk_returns200WithCorrelationIdAndPurchases() throws Exception {
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
+        UUID budgetId = UUID.randomUUID();
+        UUID correlationId = UUID.randomUUID();
+        PurchaseItem item = new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
+                BigDecimal.ZERO, null, null, "x");
+        Purchase u1 = new Purchase(p1, UUID.randomUUID(), budgetId,
+                Instant.parse("2026-04-10T12:00:00Z"), null, List.of(item));
+        Purchase u2 = new Purchase(p2, UUID.randomUUID(), budgetId,
+                Instant.parse("2026-04-11T12:00:00Z"), null, List.of(item));
+
+        when(service.reassignBudgetBulk(any(), eq(budgetId), any(), eq("r")))
+                .thenReturn(new BulkReassignBudgetResult(List.of(u1, u2), correlationId));
+
+        String json = """
+                {
+                  "purchaseIds": ["%s", "%s"],
+                  "budgetId": "%s",
+                  "date": "2026-04-29T10:00:00Z",
+                  "raison": "r"
+                }
+                """.formatted(p1, p2, budgetId);
+
+        mockMvc.perform(patch("/api/v1/purchases/budget")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.updatedCount").value(2))
+                .andExpect(jsonPath("$.correlationId").value(correlationId.toString()))
+                .andExpect(jsonPath("$.purchases[0].id").value(p1.toString()))
+                .andExpect(jsonPath("$.purchases[1].id").value(p2.toString()));
+    }
+
+    @Test
+    void reassignBudgetBulk_whenPurchaseIdsEmpty_returns400() throws Exception {
+        String json = """
+                {
+                  "purchaseIds": [],
+                  "budgetId": "%s",
+                  "date": "2026-04-29T10:00:00Z",
+                  "raison": "r"
+                }
+                """.formatted(UUID.randomUUID());
+
+        mockMvc.perform(patch("/api/v1/purchases/budget")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void reassignBudgetBulk_whenRaisonBlank_returns400() throws Exception {
+        String json = """
+                {
+                  "purchaseIds": ["%s"],
+                  "budgetId": "%s",
+                  "date": "2026-04-29T10:00:00Z",
+                  "raison": "   "
+                }
+                """.formatted(UUID.randomUUID(), UUID.randomUUID());
+
+        mockMvc.perform(patch("/api/v1/purchases/budget")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+    }
 
     @Test
     void search_withParams_passesThemAndMapsLightResponse() throws Exception {

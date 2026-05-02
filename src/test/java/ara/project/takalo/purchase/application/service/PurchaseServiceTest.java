@@ -4,6 +4,7 @@ import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.product.domain.model.Product;
+import ara.project.takalo.purchase.application.port.in.BulkReassignBudgetResult;
 import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
 import ara.project.takalo.purchase.domain.model.Purchase;
@@ -359,6 +360,154 @@ class PurchaseServiceTest {
                 corrAssign.capture());
         // Les deux mouvements partagent le même correlationId.
         assertThat(corrUnassign.getValue()).isEqualTo(corrAssign.getValue());
+    }
+
+    // ------------------------------------------------------------------
+    // Réassignation en masse (bulk)
+    // ------------------------------------------------------------------
+
+    @Test
+    void reassignBudgetBulk_allFromSameBudget_appliesWithSharedCorrelationId() {
+        UUID alice = UUID.randomUUID();
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
+        UUID courses = UUID.randomUUID();
+        UUID loisirs = UUID.randomUUID();
+        Instant when = Instant.parse("2026-04-29T10:00:00Z");
+        Purchase a1 = new Purchase(p1, alice, courses, Instant.parse("2026-04-10T12:00:00Z"), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("80.00"),
+                        BigDecimal.ZERO, null, null, "x")));
+        Purchase a2 = new Purchase(p2, alice, courses, Instant.parse("2026-04-11T12:00:00Z"), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("20.00"),
+                        BigDecimal.ZERO, null, null, "y")));
+
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(repository.findByIds(any())).thenReturn(List.of(a1, a2));
+        when(budgetService.getRawById(courses)).thenReturn(budgetWithEditors(courses, alice));
+        when(budgetService.getRawById(loisirs)).thenReturn(budgetWithEditors(loisirs, alice));
+        when(repository.save(any(Purchase.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        BulkReassignBudgetResult result = service.reassignBudgetBulk(
+                List.of(p1, p2), loisirs, when, "Mauvaise affectation");
+
+        assertThat(result.purchases()).extracting(Purchase::budgetId).containsOnly(loisirs);
+        assertThat(result.purchases()).extracting(Purchase::id).containsExactly(p1, p2);
+
+        ArgumentCaptor<UUID> corr = ArgumentCaptor.forClass(UUID.class);
+        verify(budgetService, org.mockito.Mockito.times(2)).recordPurchaseUnassignment(
+                org.mockito.ArgumentMatchers.eq(courses), any(), any(),
+                org.mockito.ArgumentMatchers.eq(when),
+                org.mockito.ArgumentMatchers.eq("Mauvaise affectation"),
+                corr.capture());
+        verify(budgetService, org.mockito.Mockito.times(2)).recordPurchaseAssignment(
+                org.mockito.ArgumentMatchers.eq(loisirs), any(), any(),
+                org.mockito.ArgumentMatchers.eq(when),
+                org.mockito.ArgumentMatchers.eq("Mauvaise affectation"),
+                corr.capture());
+        // Un seul correlationId partagé pour les 4 mouvements (2 unassign + 2 assign).
+        assertThat(corr.getAllValues()).hasSize(4);
+        assertThat(Set.copyOf(corr.getAllValues())).hasSize(1);
+        assertThat(result.correlationId()).isEqualTo(corr.getValue());
+    }
+
+    @Test
+    void reassignBudgetBulk_validatesEachOldBudgetOnceAndNewBudgetOnce() {
+        UUID alice = UUID.randomUUID();
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
+        UUID p3 = UUID.randomUUID();
+        UUID courses = UUID.randomUUID();
+        UUID loisirs = UUID.randomUUID();
+        UUID cible = UUID.randomUUID();
+        Purchase a1 = new Purchase(p1, alice, courses, Instant.now(), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
+                        BigDecimal.ZERO, null, null, "x")));
+        Purchase a2 = new Purchase(p2, alice, courses, Instant.now(), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
+                        BigDecimal.ZERO, null, null, "y")));
+        Purchase a3 = new Purchase(p3, alice, loisirs, Instant.now(), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
+                        BigDecimal.ZERO, null, null, "z")));
+
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(repository.findByIds(any())).thenReturn(List.of(a1, a2, a3));
+        when(budgetService.getRawById(any())).thenAnswer(inv ->
+                budgetWithEditors(inv.getArgument(0), alice));
+        when(repository.save(any(Purchase.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.reassignBudgetBulk(List.of(p1, p2, p3), cible, Instant.now(), "r");
+
+        // Chaque budget distinct vérifié une seule fois (courses, loisirs, cible).
+        verify(budgetService).getRawById(courses);
+        verify(budgetService).getRawById(loisirs);
+        verify(budgetService).getRawById(cible);
+    }
+
+    @Test
+    void reassignBudgetBulk_whenSomeIdsMissing_throws404AndDoesNotPersist() {
+        UUID alice = UUID.randomUUID();
+        UUID p1 = UUID.randomUUID();
+        UUID missing = UUID.randomUUID();
+        UUID cible = UUID.randomUUID();
+        Purchase a1 = new Purchase(p1, alice, null, Instant.now(), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
+                        BigDecimal.ZERO, null, null, "x")));
+
+        when(repository.findByIds(any())).thenReturn(List.of(a1));
+
+        assertThatThrownBy(() -> service.reassignBudgetBulk(
+                List.of(p1, missing), cible, Instant.now(), "r"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining(missing.toString());
+
+        verify(repository, never()).save(any());
+        verify(budgetService, never()).recordPurchaseAssignment(any(), any(), any(), any(), any(), any());
+        verify(budgetService, never()).recordPurchaseUnassignment(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void reassignBudgetBulk_whenNotOwnerOfSomePurchase_throws403() {
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
+        UUID cible = UUID.randomUUID();
+        Purchase mine = new Purchase(p1, alice, null, Instant.now(), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
+                        BigDecimal.ZERO, null, null, "x")));
+        Purchase others = new Purchase(p2, bob, null, Instant.now(), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
+                        BigDecimal.ZERO, null, null, "y")));
+
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(repository.findByIds(any())).thenReturn(List.of(mine, others));
+
+        assertThatThrownBy(() -> service.reassignBudgetBulk(
+                List.of(p1, p2), cible, Instant.now(), "r"))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void reassignBudgetBulk_whenNotEditorOfTargetBudget_throws403() {
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        UUID p1 = UUID.randomUUID();
+        UUID cible = UUID.randomUUID();
+        Purchase a1 = new Purchase(p1, alice, null, Instant.now(), null,
+                List.of(new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
+                        BigDecimal.ZERO, null, null, "x")));
+
+        when(currentUserProvider.id()).thenReturn(alice);
+        when(repository.findByIds(any())).thenReturn(List.of(a1));
+        when(budgetService.getRawById(cible)).thenReturn(budgetWithEditors(cible, bob));
+
+        assertThatThrownBy(() -> service.reassignBudgetBulk(
+                List.of(p1), cible, Instant.now(), "r"))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(repository, never()).save(any());
     }
 
     @Test

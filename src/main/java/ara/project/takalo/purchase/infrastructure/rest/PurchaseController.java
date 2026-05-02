@@ -1,5 +1,6 @@
 package ara.project.takalo.purchase.infrastructure.rest;
 
+import ara.project.takalo.purchase.application.port.in.BulkReassignBudgetResult;
 import ara.project.takalo.purchase.application.port.in.PurchaseImportServicePort;
 import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
@@ -12,6 +13,8 @@ import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseImportResult;
 import ara.project.takalo.purchase.domain.model.PurchaseImportValidationResult;
 import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
+import ara.project.takalo.purchase.infrastructure.rest.dto.BulkReassignPurchaseBudgetRequest;
+import ara.project.takalo.purchase.infrastructure.rest.dto.BulkReassignPurchaseBudgetResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseImportResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseImportValidationResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseItemDetailResponse;
@@ -258,6 +261,32 @@ public class PurchaseController {
             @Valid @RequestBody ReassignPurchaseBudgetRequest request) {
         Purchase updated = service.reassignBudget(id, request.budgetId(), request.date(), request.raison());
         return ResponseEntity.ok(purchaseWebMapper.toResponse(updated));
+    }
+
+    @PatchMapping("/budget")
+    @PreAuthorize("hasAuthority('PERM_purchase:write')")
+    @Operation(summary = "Réassigner plusieurs achats à un même budget",
+            description = "Opération en tout-ou-rien : si l'un des achats échoue (introuvable, non-auteur, " +
+                    "non-éditeur d'un budget concerné), aucune réassignation n'est appliquée. " +
+                    "Toutes les paires de mouvements de ledger générées partagent un même correlationId.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Achats réassignés"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Accès refusé (non éditeur ou non auteur)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Au moins un achat ou budget introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<BulkReassignPurchaseBudgetResponse> reassignBudgetBulk(
+            @Valid @RequestBody BulkReassignPurchaseBudgetRequest request) {
+        BulkReassignBudgetResult result = service.reassignBudgetBulk(
+                request.purchaseIds(), request.budgetId(), request.date(), request.raison());
+        var purchases = result.purchases().stream()
+                .map(purchaseLightWebMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(new BulkReassignPurchaseBudgetResponse(
+                purchases.size(), result.correlationId(), purchases));
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

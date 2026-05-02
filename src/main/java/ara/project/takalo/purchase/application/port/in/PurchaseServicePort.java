@@ -24,6 +24,9 @@ public interface PurchaseServicePort {
 
     Purchase reassignBudget(UUID purchaseId, UUID newBudgetId, Instant date, String raison);
 
+    BulkReassignBudgetResult reassignBudgetBulk(Collection<UUID> purchaseIds, UUID newBudgetId,
+                                                Instant date, String raison);
+
     /** Achats actuellement associés au budget donné. Lecture interne, sans contrôle d'auteur. */
     List<Purchase> findByBudgetId(UUID budgetId);
 

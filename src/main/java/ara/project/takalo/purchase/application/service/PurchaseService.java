@@ -4,6 +4,7 @@ import ara.project.takalo.budget.application.port.in.BudgetServicePort;
 import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.product.domain.model.Product;
+import ara.project.takalo.purchase.application.port.in.BulkReassignBudgetResult;
 import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
@@ -21,10 +22,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -125,15 +130,57 @@ public class PurchaseService implements PurchaseServicePort {
             requireBudgetEditor(newBudgetId);
         }
 
-        Purchase updated = repository.save(existing.withBudget(newBudgetId));
+        return applyBudgetReassignment(existing, newBudgetId, date, raison, UUID.randomUUID());
+    }
+
+    @Override
+    public BulkReassignBudgetResult reassignBudgetBulk(Collection<UUID> purchaseIds, UUID newBudgetId,
+                                                       Instant date, String raison) {
+        Set<UUID> uniqueIds = new LinkedHashSet<>(purchaseIds);
+        List<Purchase> found = repository.findByIds(uniqueIds);
+        if (found.size() != uniqueIds.size()) {
+            Set<UUID> foundIds = found.stream().map(Purchase::id).collect(Collectors.toSet());
+            List<UUID> missing = uniqueIds.stream().filter(id -> !foundIds.contains(id)).toList();
+            throw new ResourceNotFoundException("Achats non trouvés : " + missing);
+        }
+
+        UUID currentUserId = currentUserProvider.id();
+        for (Purchase p : found) {
+            if (!p.ownerId().equals(currentUserId)) {
+                throw new AccessDeniedException("Accès refusé à l'achat " + p.id());
+            }
+        }
+
+        if (newBudgetId != null) {
+            requireBudgetEditor(newBudgetId);
+        }
+        Set<UUID> oldBudgetIds = found.stream()
+                .map(Purchase::budgetId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        for (UUID oldBudgetId : oldBudgetIds) {
+            requireBudgetEditor(oldBudgetId);
+        }
 
         UUID correlationId = UUID.randomUUID();
+        Map<UUID, Purchase> byId = found.stream().collect(Collectors.toMap(Purchase::id, p -> p));
+        List<Purchase> updated = new ArrayList<>(uniqueIds.size());
+        for (UUID id : uniqueIds) {
+            updated.add(applyBudgetReassignment(byId.get(id), newBudgetId, date, raison, correlationId));
+        }
+        return new BulkReassignBudgetResult(updated, correlationId);
+    }
+
+    private Purchase applyBudgetReassignment(Purchase existing, UUID newBudgetId,
+                                             Instant date, String raison, UUID correlationId) {
+        UUID oldBudgetId = existing.budgetId();
+        Purchase updated = repository.save(existing.withBudget(newBudgetId));
         java.math.BigDecimal amount = existing.getTotalAmount();
         if (oldBudgetId != null) {
-            budgetService.recordPurchaseUnassignment(oldBudgetId, purchaseId, amount, date, raison, correlationId);
+            budgetService.recordPurchaseUnassignment(oldBudgetId, existing.id(), amount, date, raison, correlationId);
         }
         if (newBudgetId != null) {
-            budgetService.recordPurchaseAssignment(newBudgetId, purchaseId, amount, date, raison, correlationId);
+            budgetService.recordPurchaseAssignment(newBudgetId, existing.id(), amount, date, raison, correlationId);
         }
         return updated;
     }
