@@ -19,4 +19,6 @@ public interface ProductCategoryServicePort {
     PagedResponse<ProductCategory> search(String label, int page, int limit);
 
     Map<UUID, String> getCategoryLabels(Set<UUID> ids);
+
+    ProductCategory findOrCreateByLabel(String label);
 }

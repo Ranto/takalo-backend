@@ -30,9 +30,10 @@ public class ExcelPurchaseImportParser implements PurchaseImportParser {
     private static final int COL_PRODUCT_NAME = 1;
     private static final int COL_QUANTITY = 2;
     private static final int COL_UNIT_PRICE = 3;
-    // private static final int COL_DISCOUNT = 4;
-//    private static final int COL_EXPIRY_DATE = 5;
-//    private static final int COL_STORE_NAME = 6;
+    private static final int COL_CATEGORY_NAME = 4;
+    // private static final int COL_DISCOUNT = 5;
+//    private static final int COL_EXPIRY_DATE = 6;
+//    private static final int COL_STORE_NAME = 7;
 
     private static final DateTimeFormatter[] DATE_FORMATS = {
             DateTimeFormatter.ISO_LOCAL_DATE,
@@ -74,7 +75,8 @@ public class ExcelPurchaseImportParser implements PurchaseImportParser {
                 readBigDecimal(row.getCell(COL_UNIT_PRICE)),
                 BigDecimal.ZERO,
                 null,
-                null
+                null,
+                readString(row.getCell(COL_CATEGORY_NAME))
         );
     }
 

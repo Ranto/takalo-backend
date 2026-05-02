@@ -22,4 +22,6 @@ public interface ProductCategoryRepository {
     Map<UUID, String> getCategoryLabels(Set<UUID> ids);
 
     boolean existsByLabel(String label);
+
+    Optional<ProductCategory> findByLabelIgnoreCase(String label);
 }

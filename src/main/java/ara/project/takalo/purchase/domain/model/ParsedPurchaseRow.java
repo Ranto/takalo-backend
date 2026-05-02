@@ -11,6 +11,7 @@ public record ParsedPurchaseRow(
         BigDecimal unitPrice,
         BigDecimal discount,
         LocalDate expiryDate,
-        String storeName
+        String storeName,
+        String categoryName
 ) {
 }

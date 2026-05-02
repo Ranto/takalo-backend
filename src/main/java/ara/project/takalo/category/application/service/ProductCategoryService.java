@@ -63,4 +63,14 @@ public class ProductCategoryService implements ProductCategoryServicePort {
     public Map<UUID, String> getCategoryLabels(Set<UUID> ids) {
         return repository.getCategoryLabels(ids);
     }
+
+    @Override
+    public ProductCategory findOrCreateByLabel(String label) {
+        if (label == null || label.isBlank()) {
+            throw new IllegalArgumentException("Le libellé de la catégorie est obligatoire");
+        }
+        String trimmed = label.trim();
+        return repository.findByLabelIgnoreCase(trimmed)
+                .orElseGet(() -> repository.save(new ProductCategory(null, trimmed, null)));
+    }
 }

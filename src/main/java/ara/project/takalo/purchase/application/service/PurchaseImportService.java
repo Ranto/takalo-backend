@@ -1,6 +1,8 @@
 package ara.project.takalo.purchase.application.service;
 
+import ara.project.takalo.category.application.port.in.ProductCategoryServicePort;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
+import ara.project.takalo.product.domain.model.Product;
 import ara.project.takalo.purchase.application.port.in.PurchaseImportServicePort;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.application.port.out.PurchaseImportParser;
@@ -33,6 +35,7 @@ public class PurchaseImportService implements PurchaseImportServicePort {
     private final List<PurchaseImportParser> parsers;
     private final PurchaseServicePort purchaseService;
     private final ProductServicePort productService;
+    private final ProductCategoryServicePort categoryService;
 
     @Override
     public PurchaseImportResult importPurchases(InputStream source, ImportFormat format) {
@@ -86,7 +89,7 @@ public class PurchaseImportService implements PurchaseImportServicePort {
         }
 
         UUID productId = productService.findIdByName(row.productName())
-                .orElseThrow(() -> new ImportRowException(row.productName(), "Produit introuvable : " + row.productName()));
+                .orElseGet(() -> createProductFromRow(row));
 
         BigDecimal discount = row.discount() == null ? BigDecimal.ZERO : row.discount();
 
@@ -99,6 +102,15 @@ public class PurchaseImportService implements PurchaseImportServicePort {
                 row.storeName(),
                 row.productName()
         );
+    }
+
+    private UUID createProductFromRow(ParsedPurchaseRow row) {
+        UUID categoryId = null;
+        if (row.categoryName() != null && !row.categoryName().isBlank()) {
+            categoryId = categoryService.findOrCreateByLabel(row.categoryName()).id();
+        }
+        Product created = productService.create(new Product(null, row.productName(), categoryId, null, null));
+        return created.id();
     }
 
     private static class ImportRowException extends RuntimeException {

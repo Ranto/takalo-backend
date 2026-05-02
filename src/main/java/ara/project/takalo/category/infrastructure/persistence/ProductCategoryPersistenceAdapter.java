@@ -73,4 +73,9 @@ public class ProductCategoryPersistenceAdapter implements ProductCategoryReposit
     public boolean existsByLabel(String label) {
         return repository.existsByLabelIgnoreCase(label);
     }
+
+    @Override
+    public Optional<ProductCategory> findByLabelIgnoreCase(String label) {
+        return repository.findFirstByLabelIgnoreCase(label).map(mapper::toDomain);
+    }
 }

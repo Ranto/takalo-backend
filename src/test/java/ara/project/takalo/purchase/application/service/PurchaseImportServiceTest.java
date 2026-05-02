@@ -1,6 +1,9 @@
 package ara.project.takalo.purchase.application.service;
 
+import ara.project.takalo.category.application.port.in.ProductCategoryServicePort;
+import ara.project.takalo.category.domain.model.ProductCategory;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
+import ara.project.takalo.product.domain.model.Product;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.application.port.out.PurchaseImportParser;
 import ara.project.takalo.purchase.domain.exception.UnsupportedImportFormatException;
@@ -36,6 +39,7 @@ class PurchaseImportServiceTest {
     private PurchaseImportParser excelParser;
     private PurchaseServicePort purchaseService;
     private ProductServicePort productService;
+    private ProductCategoryServicePort categoryService;
     private PurchaseImportService service;
 
     private static final InputStream ANY_STREAM = new ByteArrayInputStream(new byte[0]);
@@ -45,8 +49,9 @@ class PurchaseImportServiceTest {
         excelParser = mock(PurchaseImportParser.class);
         purchaseService = mock(PurchaseServicePort.class);
         productService = mock(ProductServicePort.class);
+        categoryService = mock(ProductCategoryServicePort.class);
         when(excelParser.supports(ImportFormat.EXCEL_XLSX)).thenReturn(true);
-        service = new PurchaseImportService(List.of(excelParser), purchaseService, productService);
+        service = new PurchaseImportService(List.of(excelParser), purchaseService, productService, categoryService);
     }
 
     @Test
@@ -94,6 +99,7 @@ class PurchaseImportServiceTest {
     @Test
     void importPurchases_collectsErrorsAndKeepsValidRows() {
         UUID laitId = UUID.randomUUID();
+        UUID inconnuId = UUID.randomUUID();
         LocalDate date = LocalDate.of(2026, 4, 27);
 
         when(excelParser.parse(any())).thenReturn(List.of(
@@ -107,12 +113,16 @@ class PurchaseImportServiceTest {
         ));
         when(productService.findIdByName("Lait")).thenReturn(Optional.of(laitId));
         when(productService.findIdByName("Inconnu")).thenReturn(Optional.empty());
+        when(productService.create(any())).thenAnswer(inv -> {
+            Product p = inv.getArgument(0);
+            return new Product(inconnuId, p.name(), p.categoryId(), null, null);
+        });
         when(purchaseService.create(any())).thenAnswer(inv -> inv.getArgument(0));
 
         PurchaseImportResult result = service.importPurchases(ANY_STREAM, ImportFormat.EXCEL_XLSX);
 
         assertThat(result.imported()).hasSize(1);
-        assertThat(result.imported().getFirst().items()).hasSize(1);
+        assertThat(result.imported().getFirst().items()).hasSize(2);
 
         assertThat(result.errors())
                 .extracting(ImportError::lineNumber, ImportError::errorMessage)
@@ -121,8 +131,7 @@ class PurchaseImportServiceTest {
                         tuple(4, "Nom du produit manquant"),
                         tuple(5, "Quantité invalide"),
                         tuple(6, "Quantité invalide"),
-                        tuple(7, "Prix unitaire invalide"),
-                        tuple(8, "Produit introuvable : Inconnu")
+                        tuple(7, "Prix unitaire invalide")
                 );
     }
 
@@ -147,7 +156,7 @@ class PurchaseImportServiceTest {
         ParsedPurchaseRow detailed = new ParsedPurchaseRow(
                 2, date, "Lait", 2.0,
                 new BigDecimal("1.50"), new BigDecimal("0.20"),
-                LocalDate.of(2026, 12, 31), "Carrefour"
+                LocalDate.of(2026, 12, 31), "Carrefour", null
         );
         when(excelParser.parse(any())).thenReturn(List.of(detailed));
         when(productService.findIdByName("Lait")).thenReturn(Optional.of(productId));
@@ -170,7 +179,7 @@ class PurchaseImportServiceTest {
         UUID productId = UUID.randomUUID();
         when(excelParser.parse(any())).thenReturn(List.of(
                 new ParsedPurchaseRow(2, LocalDate.of(2026, 4, 27), "Lait", 1.0,
-                        new BigDecimal("1.00"), null, null, null)
+                        new BigDecimal("1.00"), null, null, null, null)
         ));
         when(productService.findIdByName("Lait")).thenReturn(Optional.of(productId));
         when(purchaseService.create(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -181,11 +190,70 @@ class PurchaseImportServiceTest {
                 .isEqualByComparingTo(BigDecimal.ZERO);
     }
 
+    @Test
+    void importPurchases_unknownProductWithCategory_createsProductWithResolvedCategory() {
+        UUID newProductId = UUID.randomUUID();
+        UUID categoryId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 4, 27);
+
+        ParsedPurchaseRow row = new ParsedPurchaseRow(
+                2, date, "Quinoa", 1.0,
+                new BigDecimal("3.00"), null, null, null, "Céréales"
+        );
+        when(excelParser.parse(any())).thenReturn(List.of(row));
+        when(productService.findIdByName("Quinoa")).thenReturn(Optional.empty());
+        when(categoryService.findOrCreateByLabel("Céréales"))
+                .thenReturn(new ProductCategory(categoryId, "Céréales", null));
+        when(productService.create(any())).thenAnswer(inv -> {
+            Product p = inv.getArgument(0);
+            return new Product(newProductId, p.name(), p.categoryId(), null, null);
+        });
+        when(purchaseService.create(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        PurchaseImportResult result = service.importPurchases(ANY_STREAM, ImportFormat.EXCEL_XLSX);
+
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.imported()).hasSize(1);
+        assertThat(result.imported().getFirst().items().getFirst().productId()).isEqualTo(newProductId);
+
+        org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
+        verify(productService).create(captor.capture());
+        assertThat(captor.getValue().name()).isEqualTo("Quinoa");
+        assertThat(captor.getValue().categoryId()).isEqualTo(categoryId);
+    }
+
+    @Test
+    void importPurchases_unknownProductWithoutCategory_createsProductWithNullCategory() {
+        UUID newProductId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 4, 27);
+
+        ParsedPurchaseRow row = new ParsedPurchaseRow(
+                2, date, "Quinoa", 1.0,
+                new BigDecimal("3.00"), null, null, null, "  "
+        );
+        when(excelParser.parse(any())).thenReturn(List.of(row));
+        when(productService.findIdByName("Quinoa")).thenReturn(Optional.empty());
+        when(productService.create(any())).thenAnswer(inv -> {
+            Product p = inv.getArgument(0);
+            return new Product(newProductId, p.name(), p.categoryId(), null, null);
+        });
+        when(purchaseService.create(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        PurchaseImportResult result = service.importPurchases(ANY_STREAM, ImportFormat.EXCEL_XLSX);
+
+        assertThat(result.errors()).isEmpty();
+        verify(categoryService, never()).findOrCreateByLabel(any());
+
+        org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
+        verify(productService).create(captor.capture());
+        assertThat(captor.getValue().categoryId()).isNull();
+    }
+
     private static ParsedPurchaseRow row(int line, LocalDate date, String name, Double qty, String price) {
         return new ParsedPurchaseRow(
                 line, date, name, qty,
                 price == null ? null : new BigDecimal(price),
-                BigDecimal.ZERO, null, null
+                BigDecimal.ZERO, null, null, null
         );
     }
 

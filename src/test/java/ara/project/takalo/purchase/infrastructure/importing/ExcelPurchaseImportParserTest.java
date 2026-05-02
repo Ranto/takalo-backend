@@ -50,6 +50,7 @@ class ExcelPurchaseImportParserTest {
             r1.createCell(1).setCellValue("Lait");
             r1.createCell(2).setCellValue(2.0);
             r1.createCell(3).setCellValue(1.50);
+            r1.createCell(4).setCellValue("Boissons");
 
             Row r2 = sheet.createRow(2);
             setDate(r2.createCell(0), LocalDate.of(2026, 4, 28), dateStyle);
@@ -68,8 +69,10 @@ class ExcelPurchaseImportParserTest {
             assertThat(rows.getFirst().discount()).isEqualByComparingTo("0");
             assertThat(rows.get(0).expiryDate()).isNull();
             assertThat(rows.get(0).storeName()).isNull();
+            assertThat(rows.get(0).categoryName()).isEqualTo("Boissons");
             assertThat(rows.get(1).lineNumber()).isEqualTo(3);
             assertThat(rows.get(1).productName()).isEqualTo("Pain");
+            assertThat(rows.get(1).categoryName()).isNull();
         }
     }
 
@@ -160,6 +163,7 @@ class ExcelPurchaseImportParserTest {
         header.createCell(1).setCellValue("productName");
         header.createCell(2).setCellValue("quantity");
         header.createCell(3).setCellValue("unitPrice");
+        header.createCell(4).setCellValue("categoryName");
     }
 
     private CellStyle dateStyle(Workbook wb) {

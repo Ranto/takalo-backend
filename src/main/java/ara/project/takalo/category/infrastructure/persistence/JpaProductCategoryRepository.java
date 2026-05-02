@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -15,6 +16,8 @@ public interface JpaProductCategoryRepository extends JpaRepository<ProductCateg
     Page<ProductCategoryEntity> findByLabelContainingIgnoreCase(String label, Pageable pageable);
 
     boolean existsByLabelIgnoreCase(String label);
+
+    Optional<ProductCategoryEntity> findFirstByLabelIgnoreCase(String label);
 
     interface CategoryIdAndLabel {
         UUID getId();
