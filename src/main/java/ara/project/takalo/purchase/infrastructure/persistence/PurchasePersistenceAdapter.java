@@ -54,19 +54,25 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
     }
 
     @Override
-    public PagedResponse<Purchase> findByDateRange(Instant start, Instant end, int page, int size) {
+    public PagedResponse<Purchase> findByDateRange(Instant start, Instant end, Boolean locked, int page, int size) {
         var pageable = PageRequest.of(page, size);
-        var entityPage = purchaseRepository.findByDateRange(start, end, pageable);
+        var entityPage = purchaseRepository.findByDateRange(start, end, lockedFilter(locked), pageable);
 
         return PaginationMapper.toPagedResponse(entityPage, purchaseMapper::toDomain);
     }
 
     @Override
-    public PagedResponse<Purchase> findByDateRangeAndOwner(Instant start, Instant end, UUID ownerId, int page, int size) {
+    public PagedResponse<Purchase> findByDateRangeAndOwner(Instant start, Instant end, UUID ownerId,
+                                                           Boolean locked, int page, int size) {
         var pageable = PageRequest.of(page, size);
-        var entityPage = purchaseRepository.findByDateRangeAndOwner(start, end, ownerId, pageable);
+        var entityPage = purchaseRepository.findByDateRangeAndOwner(start, end, ownerId, lockedFilter(locked), pageable);
 
         return PaginationMapper.toPagedResponse(entityPage, purchaseMapper::toDomain);
+    }
+
+    private static String lockedFilter(Boolean locked) {
+        if (locked == null) return "ALL";
+        return locked ? "LOCKED" : "UNLOCKED";
     }
 
     @Override

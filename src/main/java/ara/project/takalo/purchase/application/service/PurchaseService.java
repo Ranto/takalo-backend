@@ -187,11 +187,11 @@ public class PurchaseService implements PurchaseServicePort {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<Purchase> search(Instant start, Instant end, int page, int limit) {
+    public PagedResponse<Purchase> search(Instant start, Instant end, Boolean locked, int page, int limit) {
         if (currentUserProvider.hasAuthority(PERM_READ_ANY)) {
-            return repository.findByDateRange(start, end, page, limit);
+            return repository.findByDateRange(start, end, locked, page, limit);
         }
-        return repository.findByDateRangeAndOwner(start, end, currentUserProvider.id(), page, limit);
+        return repository.findByDateRangeAndOwner(start, end, currentUserProvider.id(), locked, page, limit);
     }
 
     @Override

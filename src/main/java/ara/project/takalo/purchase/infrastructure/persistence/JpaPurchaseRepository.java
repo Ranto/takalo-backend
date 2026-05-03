@@ -27,18 +27,25 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
         SELECT p FROM PurchaseEntity p
         WHERE p.purchaseDate >= COALESCE(:startDate, p.purchaseDate)
           AND p.purchaseDate <= COALESCE(:endDate, p.purchaseDate)
+          AND (:lockedFilter = 'ALL'
+               OR (:lockedFilter = 'LOCKED' AND p.lockedAt IS NOT NULL)
+               OR (:lockedFilter = 'UNLOCKED' AND p.lockedAt IS NULL))
         ORDER BY p.purchaseDate DESC
         """,
             countQuery = """
         SELECT COUNT(p) FROM PurchaseEntity p
         WHERE p.purchaseDate >= COALESCE(:startDate, p.purchaseDate)
           AND p.purchaseDate <= COALESCE(:endDate, p.purchaseDate)
+          AND (:lockedFilter = 'ALL'
+               OR (:lockedFilter = 'LOCKED' AND p.lockedAt IS NOT NULL)
+               OR (:lockedFilter = 'UNLOCKED' AND p.lockedAt IS NULL))
         """
     )
     @EntityGraph(attributePaths = "items")
     Page<PurchaseEntity> findByDateRange(
             @Param("startDate") Instant startDate,
             @Param("endDate") Instant endDate,
+            @Param("lockedFilter") String lockedFilter,
             Pageable pageable
     );
 
@@ -48,6 +55,9 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
         WHERE p.ownerId = :ownerId
           AND p.purchaseDate >= COALESCE(:startDate, p.purchaseDate)
           AND p.purchaseDate <= COALESCE(:endDate, p.purchaseDate)
+          AND (:lockedFilter = 'ALL'
+               OR (:lockedFilter = 'LOCKED' AND p.lockedAt IS NOT NULL)
+               OR (:lockedFilter = 'UNLOCKED' AND p.lockedAt IS NULL))
         ORDER BY p.purchaseDate DESC
         """,
             countQuery = """
@@ -55,6 +65,9 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
         WHERE p.ownerId = :ownerId
           AND p.purchaseDate >= COALESCE(:startDate, p.purchaseDate)
           AND p.purchaseDate <= COALESCE(:endDate, p.purchaseDate)
+          AND (:lockedFilter = 'ALL'
+               OR (:lockedFilter = 'LOCKED' AND p.lockedAt IS NOT NULL)
+               OR (:lockedFilter = 'UNLOCKED' AND p.lockedAt IS NULL))
         """
     )
     @EntityGraph(attributePaths = "items")
@@ -62,6 +75,7 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
             @Param("startDate") Instant startDate,
             @Param("endDate") Instant endDate,
             @Param("ownerId") UUID ownerId,
+            @Param("lockedFilter") String lockedFilter,
             Pageable pageable
     );
 }

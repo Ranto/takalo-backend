@@ -171,9 +171,12 @@ public class PurchaseController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             Instant end,
+
+            @Parameter(description = "Filtre sur l'état de verrouillage : true = verrouillés, false = non verrouillés, omis = tous")
+            @RequestParam(required = false) Boolean locked,
             @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
-        PagedResponse<Purchase> result = service.search(start, end, page, size);
+        PagedResponse<Purchase> result = service.search(start, end, locked, page, size);
         return result.map(purchaseLightWebMapper::toResponse);
     }
 
