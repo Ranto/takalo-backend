@@ -1,9 +1,12 @@
 package ara.project.takalo.purchase.infrastructure.rest;
 
 import ara.project.takalo.purchase.application.port.in.BulkReassignBudgetResult;
+import ara.project.takalo.purchase.application.port.in.CategoryBreakdownQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseImportServicePort;
 import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
+import ara.project.takalo.purchase.domain.model.CategorySpendingBreakdown;
+import ara.project.takalo.purchase.infrastructure.rest.dto.CategorySpendingBreakdownResponse;
 import ara.project.takalo.shared.infrastructure.security.CurrentUserProvider;
 import ara.project.takalo.user.application.port.in.UserDefaultBudgetServicePort;
 import org.openapitools.jackson.nullable.JsonNullable;
@@ -61,6 +64,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -261,6 +265,40 @@ public class PurchaseController {
             default -> throw new ara.project.takalo.shared.domain.exception.InvalidOperationException(
                     "Sens de tri invalide. Valeurs acceptées : asc, desc");
         };
+    }
+
+    @GetMapping("/stats/categories")
+    @PreAuthorize("hasAnyAuthority('PERM_purchase:read:own', 'PERM_purchase:read:any')")
+    @Operation(summary = "Répartition des dépenses par catégorie",
+            description = "Agrège la somme des dépenses (unitPrice * quantité - remise) regroupées par " +
+                    "catégorie de produit. Sans filtre de budget, agrège tous les achats accessibles. " +
+                    "Plusieurs budgetId peuvent être fournis ; includeUnbudgeted=true ajoute les achats " +
+                    "sans budget. Les utilisateurs avec :read:own ne voient que leurs propres achats.")
+    public List<CategorySpendingBreakdownResponse> categoryBreakdown(
+            @Parameter(description = "Date de début (ISO-8601, inclusif)")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            Instant start,
+
+            @Parameter(description = "Date de fin (ISO-8601, inclusif)")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            Instant end,
+
+            @Parameter(description = "Identifiants de budget à inclure (répétable). Vide = tous les budgets.")
+            @RequestParam(name = "budgetId", required = false) List<UUID> budgetIds,
+
+            @Parameter(description = "Inclure aussi les achats sans budget.")
+            @RequestParam(defaultValue = "false") boolean includeUnbudgeted) {
+        CategoryBreakdownQuery query = new CategoryBreakdownQuery(start, end, budgetIds, includeUnbudgeted);
+        return service.categoryBreakdown(query).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private CategorySpendingBreakdownResponse toResponse(CategorySpendingBreakdown b) {
+        return new CategorySpendingBreakdownResponse(
+                b.categoryId(), b.categoryLabel(), b.total(), b.itemCount());
     }
 
     @PostMapping("/{id}/lock")

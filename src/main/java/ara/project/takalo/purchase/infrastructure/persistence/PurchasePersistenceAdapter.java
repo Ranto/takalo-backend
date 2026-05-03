@@ -1,7 +1,9 @@
 package ara.project.takalo.purchase.infrastructure.persistence;
 
+import ara.project.takalo.purchase.application.port.in.CategoryBreakdownQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
+import ara.project.takalo.purchase.domain.model.CategorySpendingBreakdown;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
 import ara.project.takalo.purchase.infrastructure.persistence.entities.PurchaseEntity;
@@ -187,6 +189,64 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
         int totalPages = query.size() == 0 ? 0 : (int) ((total + query.size() - 1) / query.size());
         boolean isLast = (long) (query.page() + 1) * query.size() >= total;
         return new PagedResponse<>(content, query.page(), query.size(), total, totalPages, isLast);
+    }
+
+    @Override
+    public List<CategorySpendingBreakdown> categoryBreakdown(CategoryBreakdownQuery query, UUID ownerId) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        StringBuilder where = new StringBuilder(" WHERE 1=1");
+        if (query.start() != null) {
+            where.append(" AND i.purchase.purchaseDate >= :start");
+            params.put("start", query.start());
+        }
+        if (query.end() != null) {
+            where.append(" AND i.purchase.purchaseDate <= :end");
+            params.put("end", query.end());
+        }
+        if (ownerId != null) {
+            where.append(" AND i.purchase.ownerId = :ownerId");
+            params.put("ownerId", ownerId);
+        }
+
+        Collection<UUID> budgetIds = query.budgetIds();
+        boolean hasBudgetIds = budgetIds != null && !budgetIds.isEmpty();
+        boolean includeUnbudgeted = query.includeUnbudgeted();
+        if (hasBudgetIds && includeUnbudgeted) {
+            where.append(" AND (i.purchase.budgetId IN :budgetIds OR i.purchase.budgetId IS NULL)");
+            params.put("budgetIds", budgetIds);
+        } else if (hasBudgetIds) {
+            where.append(" AND i.purchase.budgetId IN :budgetIds");
+            params.put("budgetIds", budgetIds);
+        } else if (includeUnbudgeted) {
+            where.append(" AND i.purchase.budgetId IS NULL");
+        }
+
+        String jpql = "SELECT prod.categoryId, cat.label, "
+                + "SUM(i.unitPrice * i.quantity - COALESCE(i.discount, 0)), "
+                + "COUNT(i) "
+                + "FROM PurchaseItemEntity i "
+                + "LEFT JOIN ProductEntity prod ON prod.id = i.productId "
+                + "LEFT JOIN ProductCategoryEntity cat ON cat.id = prod.categoryId"
+                + where
+                + " GROUP BY prod.categoryId, cat.label "
+                + "ORDER BY SUM(i.unitPrice * i.quantity - COALESCE(i.discount, 0)) DESC";
+
+        TypedQuery<Object[]> q = entityManager.createQuery(jpql, Object[].class);
+        params.forEach(q::setParameter);
+        return q.getResultList().stream()
+                .map(row -> new CategorySpendingBreakdown(
+                        (UUID) row[0],
+                        (String) row[1],
+                        toBigDecimal(row[2]),
+                        ((Number) row[3]).longValue()))
+                .toList();
+    }
+
+    private static java.math.BigDecimal toBigDecimal(Object value) {
+        if (value == null) return java.math.BigDecimal.ZERO;
+        if (value instanceof java.math.BigDecimal bd) return bd;
+        if (value instanceof Number n) return java.math.BigDecimal.valueOf(n.doubleValue());
+        return new java.math.BigDecimal(value.toString());
     }
 
     private static String emptyToNull(String value) {

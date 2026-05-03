@@ -5,9 +5,11 @@ import ara.project.takalo.budget.domain.model.Budget;
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.product.domain.model.Product;
 import ara.project.takalo.purchase.application.port.in.BulkReassignBudgetResult;
+import ara.project.takalo.purchase.application.port.in.CategoryBreakdownQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseItemDetailQuery;
 import ara.project.takalo.purchase.application.port.in.PurchaseServicePort;
 import ara.project.takalo.purchase.application.port.out.PurchaseRepository;
+import ara.project.takalo.purchase.domain.model.CategorySpendingBreakdown;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItem;
 import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
@@ -204,6 +206,15 @@ public class PurchaseService implements PurchaseServicePort {
                 ? null
                 : currentUserProvider.id();
         return repository.searchItemDetails(query, ownerFilter);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CategorySpendingBreakdown> categoryBreakdown(CategoryBreakdownQuery query) {
+        UUID ownerFilter = currentUserProvider.hasAuthority(PERM_READ_ANY)
+                ? null
+                : currentUserProvider.id();
+        return repository.categoryBreakdown(query, ownerFilter);
     }
 
     @Override

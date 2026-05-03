@@ -1,5 +1,6 @@
 package ara.project.takalo.purchase.application.port.in;
 
+import ara.project.takalo.purchase.domain.model.CategorySpendingBreakdown;
 import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
 import ara.project.takalo.shared.domain.utility.PagedResponse;
@@ -42,6 +43,14 @@ public interface PurchaseServicePort {
                                    int page, int limit);
 
     PagedResponse<PurchaseItemDetail> searchItemDetails(PurchaseItemDetailQuery query);
+
+    /**
+     * Agrège les dépenses (somme de {@code unitPrice * quantity - discount}) par catégorie de
+     * produit sur la fenêtre temporelle donnée. Si {@code budgetIds} est vide et
+     * {@code includeUnbudgeted} est {@code false}, l'agrégation porte sur tous les achats
+     * accessibles à l'utilisateur (toutes catégories de budget confondues).
+     */
+    List<CategorySpendingBreakdown> categoryBreakdown(CategoryBreakdownQuery query);
 
     Purchase reassignBudget(UUID purchaseId, UUID newBudgetId, Instant date, String raison);
 
