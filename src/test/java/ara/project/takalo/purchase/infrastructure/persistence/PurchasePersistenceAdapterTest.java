@@ -110,10 +110,10 @@ class PurchasePersistenceAdapterTest {
         PageImpl<PurchaseEntity> page = new PageImpl<>(List.of(entity), expected, 1);
 
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        when(jpaRepository.findByDateRange(eq(start), eq(end), eq("ALL"), captor.capture())).thenReturn(page);
+        when(jpaRepository.findByDateRange(eq(start), eq(end), eq("ALL"), eq(null), eq(false), eq(false), captor.capture())).thenReturn(page);
         when(purchaseMapper.toDomain(entity)).thenReturn(domain);
 
-        PagedResponse<Purchase> result = adapter.findByDateRange(start, end, null, 1, 5);
+        PagedResponse<Purchase> result = adapter.findByDateRange(start, end, null, null, false, 1, 5);
 
         assertThat(captor.getValue()).isEqualTo(expected);
         assertThat(result.content()).containsExactly(domain);

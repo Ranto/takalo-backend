@@ -174,9 +174,16 @@ public class PurchaseController {
 
             @Parameter(description = "Filtre sur l'état de verrouillage : true = verrouillés, false = non verrouillés, omis = tous")
             @RequestParam(required = false) Boolean locked,
+
+            @Parameter(description = "Filtre exact sur l'identifiant du budget. Combinable avec includeUnbudgeted pour inclure les achats sans budget.")
+            @RequestParam(required = false) UUID budgetId,
+
+            @Parameter(description = "Inclure aussi les achats sans budget. Si budgetId est omis, ne renvoie que les achats sans budget.")
+            @RequestParam(defaultValue = "false") boolean includeUnbudgeted,
+
             @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
-        PagedResponse<Purchase> result = service.search(start, end, locked, page, size);
+        PagedResponse<Purchase> result = service.search(start, end, locked, budgetId, includeUnbudgeted, page, size);
         return result.map(purchaseLightWebMapper::toResponse);
     }
 

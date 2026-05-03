@@ -54,18 +54,25 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
     }
 
     @Override
-    public PagedResponse<Purchase> findByDateRange(Instant start, Instant end, Boolean locked, int page, int size) {
+    public PagedResponse<Purchase> findByDateRange(Instant start, Instant end, Boolean locked,
+                                                   UUID budgetId, boolean includeUnbudgeted,
+                                                   int page, int size) {
         var pageable = PageRequest.of(page, size);
-        var entityPage = purchaseRepository.findByDateRange(start, end, lockedFilter(locked), pageable);
+        boolean hasBudgetFilter = budgetId != null || includeUnbudgeted;
+        var entityPage = purchaseRepository.findByDateRange(
+                start, end, lockedFilter(locked), budgetId, includeUnbudgeted, hasBudgetFilter, pageable);
 
         return PaginationMapper.toPagedResponse(entityPage, purchaseMapper::toDomain);
     }
 
     @Override
     public PagedResponse<Purchase> findByDateRangeAndOwner(Instant start, Instant end, UUID ownerId,
-                                                           Boolean locked, int page, int size) {
+                                                           Boolean locked, UUID budgetId, boolean includeUnbudgeted,
+                                                           int page, int size) {
         var pageable = PageRequest.of(page, size);
-        var entityPage = purchaseRepository.findByDateRangeAndOwner(start, end, ownerId, lockedFilter(locked), pageable);
+        boolean hasBudgetFilter = budgetId != null || includeUnbudgeted;
+        var entityPage = purchaseRepository.findByDateRangeAndOwner(
+                start, end, ownerId, lockedFilter(locked), budgetId, includeUnbudgeted, hasBudgetFilter, pageable);
 
         return PaginationMapper.toPagedResponse(entityPage, purchaseMapper::toDomain);
     }

@@ -37,7 +37,9 @@ public interface PurchaseServicePort {
 
     Purchase getById(UUID id);
 
-    PagedResponse<Purchase> search(Instant start, Instant end, Boolean locked, int page, int limit);
+    PagedResponse<Purchase> search(Instant start, Instant end, Boolean locked,
+                                   UUID budgetId, boolean includeUnbudgeted,
+                                   int page, int limit);
 
     PagedResponse<PurchaseItemDetail> searchItemDetails(PurchaseItemDetailQuery query);
 

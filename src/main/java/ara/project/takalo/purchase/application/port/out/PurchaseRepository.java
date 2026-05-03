@@ -18,9 +18,12 @@ public interface PurchaseRepository {
 
     PagedResponse<Purchase> findAll(int page, int size);
 
-    PagedResponse<Purchase> findByDateRange(Instant start, Instant end, Boolean locked, int page, int size);
+    PagedResponse<Purchase> findByDateRange(Instant start, Instant end, Boolean locked,
+                                            UUID budgetId, boolean includeUnbudgeted,
+                                            int page, int size);
 
     PagedResponse<Purchase> findByDateRangeAndOwner(Instant start, Instant end, UUID ownerId, Boolean locked,
+                                                    UUID budgetId, boolean includeUnbudgeted,
                                                     int page, int size);
 
     /**

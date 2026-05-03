@@ -198,7 +198,7 @@ class PurchaseControllerTest {
 
     @Test
     void search_withoutParams_usesDefaults() throws Exception {
-        when(service.search(eq(null), eq(null), eq(null), eq(0), eq(10)))
+        when(service.search(eq(null), eq(null), eq(null), eq(null), eq(false), eq(0), eq(10)))
                 .thenReturn(new PagedResponse<>(List.of(), 0, 10, 0L, 0, true));
 
         mockMvc.perform(get("/api/v1/purchases"))
@@ -206,7 +206,7 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.pageNumber").value(0))
                 .andExpect(jsonPath("$.pageSize").value(10));
 
-        verify(service).search(null, null, null, 0, 10);
+        verify(service).search(null, null, null, null, false, 0, 10);
     }
 
     // ------------------------------------------------------------------
@@ -332,7 +332,7 @@ class PurchaseControllerTest {
         Instant end = Instant.parse("2024-12-31T23:59:59Z");
         PagedResponse<Purchase> page = new PagedResponse<>(List.of(domain), 1, 5, 1L, 1, true);
 
-        when(service.search(start, end, null, 1, 5)).thenReturn(page);
+        when(service.search(start, end, null, null, false, 1, 5)).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/purchases")
                         .param("start", "2024-01-01T00:00:00Z")
@@ -347,6 +347,6 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.pageSize").value(5))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(service).search(start, end, null, 1, 5);
+        verify(service).search(start, end, null, null, false, 1, 5);
     }
 }

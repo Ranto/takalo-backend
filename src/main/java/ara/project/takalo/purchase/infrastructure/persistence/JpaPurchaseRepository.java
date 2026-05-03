@@ -30,6 +30,11 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
           AND (:lockedFilter = 'ALL'
                OR (:lockedFilter = 'LOCKED' AND p.lockedAt IS NOT NULL)
                OR (:lockedFilter = 'UNLOCKED' AND p.lockedAt IS NULL))
+          AND (
+            :hasBudgetFilter = false
+            OR (:includeUnbudgeted = true AND p.budgetId IS NULL)
+            OR (:budgetId IS NOT NULL AND p.budgetId = :budgetId)
+          )
         ORDER BY p.purchaseDate DESC
         """,
             countQuery = """
@@ -39,6 +44,11 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
           AND (:lockedFilter = 'ALL'
                OR (:lockedFilter = 'LOCKED' AND p.lockedAt IS NOT NULL)
                OR (:lockedFilter = 'UNLOCKED' AND p.lockedAt IS NULL))
+          AND (
+            :hasBudgetFilter = false
+            OR (:includeUnbudgeted = true AND p.budgetId IS NULL)
+            OR (:budgetId IS NOT NULL AND p.budgetId = :budgetId)
+          )
         """
     )
     @EntityGraph(attributePaths = "items")
@@ -46,6 +56,9 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
             @Param("startDate") Instant startDate,
             @Param("endDate") Instant endDate,
             @Param("lockedFilter") String lockedFilter,
+            @Param("budgetId") UUID budgetId,
+            @Param("includeUnbudgeted") boolean includeUnbudgeted,
+            @Param("hasBudgetFilter") boolean hasBudgetFilter,
             Pageable pageable
     );
 
@@ -58,6 +71,11 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
           AND (:lockedFilter = 'ALL'
                OR (:lockedFilter = 'LOCKED' AND p.lockedAt IS NOT NULL)
                OR (:lockedFilter = 'UNLOCKED' AND p.lockedAt IS NULL))
+          AND (
+            :hasBudgetFilter = false
+            OR (:includeUnbudgeted = true AND p.budgetId IS NULL)
+            OR (:budgetId IS NOT NULL AND p.budgetId = :budgetId)
+          )
         ORDER BY p.purchaseDate DESC
         """,
             countQuery = """
@@ -68,6 +86,11 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
           AND (:lockedFilter = 'ALL'
                OR (:lockedFilter = 'LOCKED' AND p.lockedAt IS NOT NULL)
                OR (:lockedFilter = 'UNLOCKED' AND p.lockedAt IS NULL))
+          AND (
+            :hasBudgetFilter = false
+            OR (:includeUnbudgeted = true AND p.budgetId IS NULL)
+            OR (:budgetId IS NOT NULL AND p.budgetId = :budgetId)
+          )
         """
     )
     @EntityGraph(attributePaths = "items")
@@ -76,6 +99,9 @@ public interface JpaPurchaseRepository extends JpaRepository<PurchaseEntity, UUI
             @Param("endDate") Instant endDate,
             @Param("ownerId") UUID ownerId,
             @Param("lockedFilter") String lockedFilter,
+            @Param("budgetId") UUID budgetId,
+            @Param("includeUnbudgeted") boolean includeUnbudgeted,
+            @Param("hasBudgetFilter") boolean hasBudgetFilter,
             Pageable pageable
     );
 }

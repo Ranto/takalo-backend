@@ -516,9 +516,9 @@ class PurchaseServiceTest {
         Instant end = Instant.parse("2024-12-31T23:59:59Z");
         PagedResponse<Purchase> page = new PagedResponse<>(List.of(), 0, 10, 0L, 0, true);
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(true);
-        when(repository.findByDateRange(start, end, null, 0, 10)).thenReturn(page);
+        when(repository.findByDateRange(start, end, null, null, false, 0, 10)).thenReturn(page);
 
-        PagedResponse<Purchase> result = service.search(start, end, null, 0, 10);
+        PagedResponse<Purchase> result = service.search(start, end, null, null, false, 0, 10);
 
         assertThat(result).isSameAs(page);
     }
@@ -567,9 +567,9 @@ class PurchaseServiceTest {
         PagedResponse<Purchase> page = new PagedResponse<>(List.of(), 0, 10, 0L, 0, true);
         when(currentUserProvider.hasAuthority("PERM_purchase:read:any")).thenReturn(false);
         when(currentUserProvider.id()).thenReturn(currentUser);
-        when(repository.findByDateRangeAndOwner(start, end, currentUser, null, 0, 10)).thenReturn(page);
+        when(repository.findByDateRangeAndOwner(start, end, currentUser, null, null, false, 0, 10)).thenReturn(page);
 
-        PagedResponse<Purchase> result = service.search(start, end, null, 0, 10);
+        PagedResponse<Purchase> result = service.search(start, end, null, null, false, 0, 10);
 
         assertThat(result).isSameAs(page);
     }
