@@ -76,7 +76,7 @@ class BudgetServiceTimelineTest {
         PurchaseItem item = new PurchaseItem(UUID.randomUUID(), 1.0,
                 new BigDecimal(amount), null, null, null, "p");
         return new Purchase(id, UUID.randomUUID(), budgetId,
-                Instant.parse(dateIso), null, List.of(item));
+                Instant.parse(dateIso), null, null, null, List.of(item));
     }
 
     // ------------------------------------------------------------------

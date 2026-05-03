@@ -22,6 +22,8 @@ public class PurchaseWebMapper {
                 effectiveBudgetId,
                 request.purchaseDate(),
                 request.notes(),
+                null,
+                null,
                 request.items().stream().map(itemWebMapper::toDomain).toList()
         );
     }
@@ -38,6 +40,8 @@ public class PurchaseWebMapper {
                 purchase.purchaseDate(),
                 purchase.notes(),
                 purchase.items().stream().map(itemWebMapper::toResponse).toList(),
-                purchase.getTotalAmount());
+                purchase.getTotalAmount(),
+                purchase.lockedAt(),
+                purchase.lockedBy());
     }
 }

@@ -14,6 +14,8 @@ public record PurchaseResponse(
         @Schema(description = "Date d'achat", example = "2026-04-01T10:30:00Z") Instant purchaseDate,
         @Schema(description = "Note libre facultative associée à l'achat") String notes,
         @Schema(description = "Articles de l'achat") List<PurchaseItemResponse> items,
-        @Schema(description = "Montant total après remises", example = "12.50") BigDecimal totalAmount
+        @Schema(description = "Montant total après remises", example = "12.50") BigDecimal totalAmount,
+        @Schema(description = "Date de verrouillage (null si l'achat n'est pas verrouillé)") Instant lockedAt,
+        @Schema(description = "Identifiant de l'utilisateur ayant verrouillé l'achat") UUID lockedBy
 ) {
 }

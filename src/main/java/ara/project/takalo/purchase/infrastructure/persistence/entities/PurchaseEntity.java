@@ -59,6 +59,12 @@ public class PurchaseEntity {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "locked_at")
+    private Instant lockedAt;
+
+    @Column(name = "locked_by")
+    private UUID lockedBy;
+
     @CreatedBy
     @Column(name = "created_by", nullable = false, updatable = false)
     private UUID createdBy;

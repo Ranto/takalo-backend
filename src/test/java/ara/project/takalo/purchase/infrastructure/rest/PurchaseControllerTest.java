@@ -93,7 +93,7 @@ class PurchaseControllerTest {
         Instant purchaseDate = Instant.parse("2024-01-01T00:00:00Z");
         PurchaseItem savedItem = new PurchaseItem(productId, 2.0, new BigDecimal("10.00"),
                 new BigDecimal("1.00"), null, "Carrefour", "Lait");
-        Purchase saved = new Purchase(generated, null, null, purchaseDate, null, List.of(savedItem));
+        Purchase saved = new Purchase(generated, null, null, purchaseDate, null, null, null, List.of(savedItem));
 
         when(service.create(any(Purchase.class))).thenReturn(saved);
 
@@ -161,7 +161,7 @@ class PurchaseControllerTest {
         UUID productId = UUID.randomUUID();
         PurchaseItem item = new PurchaseItem(productId, 1.0, new BigDecimal("4.00"),
                 BigDecimal.ZERO, null, null, "Pain");
-        Purchase domain = new Purchase(id, null, null, Instant.parse("2024-01-01T00:00:00Z"), null, List.of(item));
+        Purchase domain = new Purchase(id, null, null, Instant.parse("2024-01-01T00:00:00Z"), null, null, null, List.of(item));
 
         when(service.getById(id)).thenReturn(domain);
 
@@ -176,7 +176,7 @@ class PurchaseControllerTest {
     void update_returns200AndPassesPathId() throws Exception {
         UUID pathId = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
-        Purchase saved = new Purchase(pathId, null, null, Instant.parse("2024-01-01T00:00:00Z"), null, List.of(
+        Purchase saved = new Purchase(pathId, null, null, Instant.parse("2024-01-01T00:00:00Z"), null, null, null, List.of(
                 new PurchaseItem(productId, 2.0, new BigDecimal("10.00"), new BigDecimal("1.00"),
                         null, "Carrefour", "Lait")
         ));
@@ -260,9 +260,9 @@ class PurchaseControllerTest {
         PurchaseItem item = new PurchaseItem(UUID.randomUUID(), 1.0, new BigDecimal("10.00"),
                 BigDecimal.ZERO, null, null, "x");
         Purchase u1 = new Purchase(p1, UUID.randomUUID(), budgetId,
-                Instant.parse("2026-04-10T12:00:00Z"), null, List.of(item));
+                Instant.parse("2026-04-10T12:00:00Z"), null, null, null, List.of(item));
         Purchase u2 = new Purchase(p2, UUID.randomUUID(), budgetId,
-                Instant.parse("2026-04-11T12:00:00Z"), null, List.of(item));
+                Instant.parse("2026-04-11T12:00:00Z"), null, null, null, List.of(item));
 
         when(service.reassignBudgetBulk(any(), eq(budgetId), any(), eq("r")))
                 .thenReturn(new BulkReassignBudgetResult(List.of(u1, u2), correlationId));
@@ -327,7 +327,7 @@ class PurchaseControllerTest {
         Instant date = Instant.parse("2024-01-01T00:00:00Z");
         PurchaseItem item = new PurchaseItem(productId, 2.0, new BigDecimal("10.00"),
                 new BigDecimal("1.00"), null, null, "Lait");
-        Purchase domain = new Purchase(id, null, null, date, null, List.of(item));
+        Purchase domain = new Purchase(id, null, null, date, null, null, null, List.of(item));
         Instant start = Instant.parse("2024-01-01T00:00:00Z");
         Instant end = Instant.parse("2024-12-31T23:59:59Z");
         PagedResponse<Purchase> page = new PagedResponse<>(List.of(domain), 1, 5, 1L, 1, true);

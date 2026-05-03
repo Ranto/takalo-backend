@@ -19,6 +19,8 @@ public class PurchaseMapper {
                 entity.getBudgetId(),
                 entity.getPurchaseDate(),
                 entity.getNotes(),
+                entity.getLockedAt(),
+                entity.getLockedBy(),
                 entity.getItems().stream().map(purchaseItemMapper::toDomain).toList()
         );
     }
@@ -31,6 +33,8 @@ public class PurchaseMapper {
                 .budgetId(domain.budgetId())
                 .purchaseDate(domain.purchaseDate())
                 .notes(domain.notes())
+                .lockedAt(domain.lockedAt())
+                .lockedBy(domain.lockedBy())
                 .build();
 
         if (domain.items() != null) {

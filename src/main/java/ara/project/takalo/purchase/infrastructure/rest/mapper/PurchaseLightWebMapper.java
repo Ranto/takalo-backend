@@ -13,7 +13,8 @@ public class PurchaseLightWebMapper {
                 domain.budgetId(),
                 domain.purchaseDate(),
                 domain.items().size(),
-                domain.getTotalAmount()
+                domain.getTotalAmount(),
+                domain.isLocked()
         );
     }
 }

@@ -16,6 +16,25 @@ public interface PurchaseServicePort {
 
     void delete(UUID id);
 
+    /** Verrouille un achat. Seul l'auteur de l'achat ou un SUPER_ADMIN peut verrouiller. */
+    Purchase lock(UUID id);
+
+    /** Déverrouille un achat. Réservé au SUPER_ADMIN. */
+    Purchase unlock(UUID id);
+
+    /**
+     * Verrouille plusieurs achats en une seule opération atomique. Si l'un des achats échoue
+     * (introuvable, non-auteur et non SUPER_ADMIN), aucune modification n'est appliquée.
+     * Les achats déjà verrouillés sont laissés inchangés.
+     */
+    List<Purchase> lockBulk(Collection<UUID> purchaseIds);
+
+    /**
+     * Déverrouille plusieurs achats en une seule opération atomique. Réservé au SUPER_ADMIN.
+     * Les achats non verrouillés sont laissés inchangés.
+     */
+    List<Purchase> unlockBulk(Collection<UUID> purchaseIds);
+
     Purchase getById(UUID id);
 
     PagedResponse<Purchase> search(Instant start, Instant end, int page, int limit);

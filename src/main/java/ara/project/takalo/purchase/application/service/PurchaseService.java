@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 public class PurchaseService implements PurchaseServicePort {
 
     private static final String PERM_READ_ANY = "PERM_purchase:read:any";
+    private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
 
     private final PurchaseRepository repository;
     private final ProductServicePort productService;
@@ -58,12 +59,15 @@ public class PurchaseService implements PurchaseServicePort {
     @Override
     public Purchase update(UUID id, Purchase purchase) {
         return repository.findById(id).map(existing -> {
+            requireUnlockedOrSuperAdmin(existing);
             Purchase merged = new Purchase(
                     existing.id(),
                     existing.ownerId(),
                     existing.budgetId(),
                     purchase.purchaseDate(),
                     purchase.notes(),
+                    existing.lockedAt(),
+                    existing.lockedBy(),
                     purchase.items()
             );
             Purchase purchaseToSave = resolveProductReferences(merged);
@@ -79,7 +83,94 @@ public class PurchaseService implements PurchaseServicePort {
                 && !currentUserProvider.hasAuthority(PERM_READ_ANY)) {
             throw new AccessDeniedException("Accès refusé à cet achat");
         }
+        requireUnlockedOrSuperAdmin(existing);
         repository.deleteById(id);
+    }
+
+    @Override
+    public Purchase lock(UUID id) {
+        Purchase existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
+        boolean isOwner = existing.ownerId().equals(currentUserProvider.id());
+        if (!isOwner && !isSuperAdmin()) {
+            throw new AccessDeniedException("Accès refusé à cet achat");
+        }
+        if (existing.isLocked()) {
+            return existing;
+        }
+        Purchase locked = existing.withLock(Instant.now(), currentUserProvider.id());
+        return repository.save(locked);
+    }
+
+    @Override
+    public List<Purchase> lockBulk(Collection<UUID> purchaseIds) {
+        Set<UUID> uniqueIds = new LinkedHashSet<>(purchaseIds);
+        List<Purchase> found = repository.findByIds(uniqueIds);
+        if (found.size() != uniqueIds.size()) {
+            Set<UUID> foundIds = found.stream().map(Purchase::id).collect(Collectors.toSet());
+            List<UUID> missing = uniqueIds.stream().filter(fid -> !foundIds.contains(fid)).toList();
+            throw new ResourceNotFoundException("Achats non trouvés : " + missing);
+        }
+
+        UUID currentUserId = currentUserProvider.id();
+        boolean superAdmin = isSuperAdmin();
+        for (Purchase p : found) {
+            if (!superAdmin && !p.ownerId().equals(currentUserId)) {
+                throw new AccessDeniedException("Accès refusé à l'achat " + p.id());
+            }
+        }
+
+        Instant now = Instant.now();
+        Map<UUID, Purchase> byId = found.stream().collect(Collectors.toMap(Purchase::id, p -> p));
+        List<Purchase> updated = new ArrayList<>(uniqueIds.size());
+        for (UUID id : uniqueIds) {
+            Purchase p = byId.get(id);
+            if (p.isLocked()) {
+                updated.add(p);
+            } else {
+                updated.add(repository.save(p.withLock(now, currentUserId)));
+            }
+        }
+        return updated;
+    }
+
+    @Override
+    public List<Purchase> unlockBulk(Collection<UUID> purchaseIds) {
+        if (!isSuperAdmin()) {
+            throw new ForbiddenException("Seul le super administrateur peut déverrouiller un achat");
+        }
+        Set<UUID> uniqueIds = new LinkedHashSet<>(purchaseIds);
+        List<Purchase> found = repository.findByIds(uniqueIds);
+        if (found.size() != uniqueIds.size()) {
+            Set<UUID> foundIds = found.stream().map(Purchase::id).collect(Collectors.toSet());
+            List<UUID> missing = uniqueIds.stream().filter(fid -> !foundIds.contains(fid)).toList();
+            throw new ResourceNotFoundException("Achats non trouvés : " + missing);
+        }
+
+        Map<UUID, Purchase> byId = found.stream().collect(Collectors.toMap(Purchase::id, p -> p));
+        List<Purchase> updated = new ArrayList<>(uniqueIds.size());
+        for (UUID id : uniqueIds) {
+            Purchase p = byId.get(id);
+            if (!p.isLocked()) {
+                updated.add(p);
+            } else {
+                updated.add(repository.save(p.withLock(null, null)));
+            }
+        }
+        return updated;
+    }
+
+    @Override
+    public Purchase unlock(UUID id) {
+        Purchase existing = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Achat non trouvé"));
+        if (!isSuperAdmin()) {
+            throw new ForbiddenException("Seul le super administrateur peut déverrouiller un achat");
+        }
+        if (!existing.isLocked()) {
+            return existing;
+        }
+        return repository.save(existing.withLock(null, null));
     }
 
     @Override
@@ -121,6 +212,7 @@ public class PurchaseService implements PurchaseServicePort {
         if (!existing.ownerId().equals(currentUserId)) {
             throw new AccessDeniedException("Accès refusé à cet achat");
         }
+        requireUnlockedOrSuperAdmin(existing);
 
         UUID oldBudgetId = existing.budgetId();
         if (oldBudgetId != null) {
@@ -145,9 +237,14 @@ public class PurchaseService implements PurchaseServicePort {
         }
 
         UUID currentUserId = currentUserProvider.id();
+        boolean superAdmin = isSuperAdmin();
         for (Purchase p : found) {
             if (!p.ownerId().equals(currentUserId)) {
                 throw new AccessDeniedException("Accès refusé à l'achat " + p.id());
+            }
+            if (p.isLocked() && !superAdmin) {
+                throw new ForbiddenException("Achat verrouillé : " + p.id()
+                        + ". Seul le super administrateur peut le modifier.");
             }
         }
 
@@ -225,7 +322,20 @@ public class PurchaseService implements PurchaseServicePort {
                 purchase.budgetId(),
                 purchase.purchaseDate(),
                 purchase.notes(),
+                purchase.lockedAt(),
+                purchase.lockedBy(),
                 resolvedItems
         );
+    }
+
+    private boolean isSuperAdmin() {
+        return currentUserProvider.hasAuthority(ROLE_SUPER_ADMIN);
+    }
+
+    private void requireUnlockedOrSuperAdmin(Purchase purchase) {
+        if (purchase.isLocked() && !isSuperAdmin()) {
+            throw new ForbiddenException(
+                    "Achat verrouillé. Seul le super administrateur peut le modifier.");
+        }
     }
 }

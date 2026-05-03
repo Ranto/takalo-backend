@@ -13,6 +13,7 @@ import ara.project.takalo.purchase.domain.model.Purchase;
 import ara.project.takalo.purchase.domain.model.PurchaseImportResult;
 import ara.project.takalo.purchase.domain.model.PurchaseImportValidationResult;
 import ara.project.takalo.purchase.domain.model.PurchaseItemDetail;
+import ara.project.takalo.purchase.infrastructure.rest.dto.BulkPurchaseIdsRequest;
 import ara.project.takalo.purchase.infrastructure.rest.dto.BulkReassignPurchaseBudgetRequest;
 import ara.project.takalo.purchase.infrastructure.rest.dto.BulkReassignPurchaseBudgetResponse;
 import ara.project.takalo.purchase.infrastructure.rest.dto.PurchaseImportResponse;
@@ -250,6 +251,88 @@ public class PurchaseController {
             default -> throw new ara.project.takalo.shared.domain.exception.InvalidOperationException(
                     "Sens de tri invalide. Valeurs acceptées : asc, desc");
         };
+    }
+
+    @PostMapping("/{id}/lock")
+    @PreAuthorize("hasAnyAuthority('PERM_purchase:read:own', 'PERM_purchase:read:any')")
+    @Operation(summary = "Verrouiller un achat",
+            description = "Verrouille l'achat contre toute modification (mise à jour, suppression, " +
+                    "réassignation de budget). Une fois verrouillé, seul un SUPER_ADMIN peut " +
+                    "modifier l'achat ou le déverrouiller. Le verrouillage peut être posé par " +
+                    "l'auteur de l'achat ou par un SUPER_ADMIN.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Achat verrouillé"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé (achat appartenant à un autre utilisateur)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Achat introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<PurchaseResponse> lock(
+            @Parameter(description = "Identifiant de l'achat") @PathVariable UUID id) {
+        Purchase locked = service.lock(id);
+        return ResponseEntity.ok(purchaseWebMapper.toResponse(locked));
+    }
+
+    @PostMapping("/lock")
+    @PreAuthorize("hasAnyAuthority('PERM_purchase:read:own', 'PERM_purchase:read:any')")
+    @Operation(summary = "Verrouiller plusieurs achats",
+            description = "Opération en tout-ou-rien : si un achat est introuvable ou n'appartient pas " +
+                    "à l'utilisateur courant (sauf SUPER_ADMIN), aucun verrouillage n'est appliqué. " +
+                    "Les achats déjà verrouillés sont retournés inchangés.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Achats verrouillés"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Accès refusé (achat appartenant à un autre utilisateur)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Au moins un achat introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<java.util.List<PurchaseLightResponse>> lockBulk(
+            @Valid @RequestBody BulkPurchaseIdsRequest request) {
+        var purchases = service.lockBulk(request.purchaseIds()).stream()
+                .map(purchaseLightWebMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(purchases);
+    }
+
+    @PostMapping("/unlock")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Déverrouiller plusieurs achats",
+            description = "Opération en tout-ou-rien réservée au SUPER_ADMIN. " +
+                    "Les achats non verrouillés sont retournés inchangés.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Achats déverrouillés"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Accès refusé (rôle SUPER_ADMIN requis)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Au moins un achat introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<java.util.List<PurchaseLightResponse>> unlockBulk(
+            @Valid @RequestBody BulkPurchaseIdsRequest request) {
+        var purchases = service.unlockBulk(request.purchaseIds()).stream()
+                .map(purchaseLightWebMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(purchases);
+    }
+
+    @PostMapping("/{id}/unlock")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Déverrouiller un achat",
+            description = "Déverrouille un achat précédemment verrouillé. Réservé au SUPER_ADMIN.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Achat déverrouillé"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé (rôle SUPER_ADMIN requis)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Achat introuvable",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<PurchaseResponse> unlock(
+            @Parameter(description = "Identifiant de l'achat") @PathVariable UUID id) {
+        Purchase unlocked = service.unlock(id);
+        return ResponseEntity.ok(purchaseWebMapper.toResponse(unlocked));
     }
 
     @PatchMapping("/{id}/budget")

@@ -12,6 +12,7 @@ public record PurchaseLightResponse(
         @Schema(description = "Identifiant du budget associé (peut être null)") UUID budgetId,
         @Schema(description = "Date d'achat", example = "2026-04-01T10:30:00Z") Instant purchaseDate,
         @Schema(description = "Nombre d'articles", example = "3") int itemCount,
-        @Schema(description = "Montant total", example = "12.50") BigDecimal totalAmount
+        @Schema(description = "Montant total", example = "12.50") BigDecimal totalAmount,
+        @Schema(description = "Indique si l'achat est verrouillé pour modification") boolean locked
 ) {
 }
