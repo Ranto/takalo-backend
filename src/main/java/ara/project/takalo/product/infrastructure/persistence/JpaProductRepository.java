@@ -22,16 +22,29 @@ public interface JpaProductRepository extends JpaRepository<ProductEntity, UUID>
     @Query(
             value = """
                     SELECT p FROM ProductEntity p
-                            WHERE (:categoryIds IS NULL OR p.categoryId IN :categoryIds)
-                              AND (:name IS NULL OR p.name ILIKE %:name%)
+                            WHERE (:name IS NULL OR p.name ILIKE %:name%)
+                              AND (
+                                :hasCategoryFilter = false
+                                OR (:includeUncategorized = true AND p.categoryId IS NULL)
+                                OR (:categoryIds IS NOT NULL AND p.categoryId IN :categoryIds)
+                              )
                     """,
             countQuery = """
                     SELECT count(p) FROM ProductEntity p
-                            WHERE (:categoryIds IS NULL OR p.categoryId IN :categoryIds)
-                              AND (:name IS NULL OR p.name ILIKE %:name%)
+                            WHERE (:name IS NULL OR p.name ILIKE %:name%)
+                              AND (
+                                :hasCategoryFilter = false
+                                OR (:includeUncategorized = true AND p.categoryId IS NULL)
+                                OR (:categoryIds IS NOT NULL AND p.categoryId IN :categoryIds)
+                              )
                     """
     )
-    Page<ProductEntity> findAllWithNameOrCategoryIdIn(@Param("name") String name, @Param("categoryIds") List<UUID> categoryIds, Pageable pageable);
+    Page<ProductEntity> findAllWithNameOrCategoryIdIn(
+            @Param("name") String name,
+            @Param("categoryIds") List<UUID> categoryIds,
+            @Param("includeUncategorized") boolean includeUncategorized,
+            @Param("hasCategoryFilter") boolean hasCategoryFilter,
+            Pageable pageable);
 
     interface ProductIdAndName {
         UUID getId();

@@ -18,7 +18,7 @@ public interface ProductRepository {
 
     void deleteById(UUID id);
 
-    PagedResponse<Product> findByNameOrCategoryIds(String name, List<UUID> categoryIds, int page, int size);
+    PagedResponse<Product> findByNameOrCategoryIds(String name, List<UUID> categoryIds, boolean includeUncategorized, int page, int size);
 
     boolean existsByName(String name);
 

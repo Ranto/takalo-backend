@@ -91,7 +91,7 @@ class ProductPersistenceAdapterTest {
         PageImpl<ProductEntity> page = new PageImpl<>(List.of(entity), expected, 1);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(jpaRepository.findAllWithNameOrCategoryIdIn(eq(null), eq(null), pageableCaptor.capture()))
+        when(jpaRepository.findAllWithNameOrCategoryIdIn(eq(null), eq(null), eq(false), eq(false), pageableCaptor.capture()))
                 .thenReturn(page);
         when(productMapper.toDomain(entity)).thenReturn(domain);
 
@@ -115,11 +115,11 @@ class ProductPersistenceAdapterTest {
         PageImpl<ProductEntity> page = new PageImpl<>(List.of(entity), expected, 1);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(jpaRepository.findAllWithNameOrCategoryIdIn(eq("Pho"), eq(categoryIds), pageableCaptor.capture()))
+        when(jpaRepository.findAllWithNameOrCategoryIdIn(eq("Pho"), eq(categoryIds), eq(false), eq(true), pageableCaptor.capture()))
                 .thenReturn(page);
         when(productMapper.toDomain(entity)).thenReturn(domain);
 
-        PagedResponse<Product> result = adapter.findByNameOrCategoryIds("Pho", categoryIds, 1, 5);
+        PagedResponse<Product> result = adapter.findByNameOrCategoryIds("Pho", categoryIds, false, 1, 5);
 
         assertThat(pageableCaptor.getValue()).isEqualTo(expected);
         assertThat(result.content()).containsExactly(domain);

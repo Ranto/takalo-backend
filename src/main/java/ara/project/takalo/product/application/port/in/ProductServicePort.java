@@ -19,7 +19,7 @@ public interface ProductServicePort {
 
     Product getById(UUID id);
 
-    PagedResponse<Product> searchByCategoriesOrName(List<UUID> categoryIds, String name, int page, int limit);
+    PagedResponse<Product> searchByCategoriesOrName(List<UUID> categoryIds, String name, boolean includeUncategorized, int page, int limit);
 
     PagedResponse<Product> findAll(int page, int size);
 

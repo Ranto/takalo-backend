@@ -92,10 +92,11 @@ public class ProductController {
     public ResponseEntity<PagedResponse<ProductResponse>> search(
             @Parameter(description = "Filtre partiel sur le nom") @RequestParam(required = false) String name,
             @Parameter(description = "Identifiants de catégories à inclure") @RequestParam(required = false) List<UUID> categoryIds,
+            @Parameter(description = "Inclure aussi les produits sans catégorie") @RequestParam(defaultValue = "false") boolean includeUncategorized,
             @Parameter(description = "Numéro de page (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Taille de la page") @RequestParam(defaultValue = "10") int size) {
 
-        PagedResponse<Product> pagedDomain = productServicePort.searchByCategoriesOrName(categoryIds, name, page, size);
+        PagedResponse<Product> pagedDomain = productServicePort.searchByCategoriesOrName(categoryIds, name, includeUncategorized, page, size);
         PagedResponse<ProductResponse> response = webMapper.toResponses(pagedDomain);
         return ResponseEntity.ok(response);
     }

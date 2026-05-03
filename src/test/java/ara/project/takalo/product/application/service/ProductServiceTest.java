@@ -162,9 +162,9 @@ class ProductServiceTest {
     void searchByCategoriesOrName_delegatesToRepository() {
         List<UUID> categoryIds = List.of(UUID.randomUUID());
         PagedResponse<Product> page = new PagedResponse<>(List.of(), 2, 7, 0L, 0, true);
-        when(repository.findByNameOrCategoryIds("foo", categoryIds, 2, 7)).thenReturn(page);
+        when(repository.findByNameOrCategoryIds("foo", categoryIds, false, 2, 7)).thenReturn(page);
 
-        PagedResponse<Product> result = service.searchByCategoriesOrName(categoryIds, "foo", 2, 7);
+        PagedResponse<Product> result = service.searchByCategoriesOrName(categoryIds, "foo", false, 2, 7);
 
         assertThat(result).isSameAs(page);
     }

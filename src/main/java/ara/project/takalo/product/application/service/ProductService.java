@@ -62,8 +62,8 @@ public class ProductService implements ProductServicePort {
 
     @Transactional(readOnly = true)
     @Override
-    public PagedResponse<Product> searchByCategoriesOrName(List<UUID> categoryIds, String name, int page, int limit) {
-        return repository.findByNameOrCategoryIds(name, categoryIds, page, limit);
+    public PagedResponse<Product> searchByCategoriesOrName(List<UUID> categoryIds, String name, boolean includeUncategorized, int page, int limit) {
+        return repository.findByNameOrCategoryIds(name, categoryIds, includeUncategorized, page, limit);
     }
 
     @Transactional(readOnly = true)

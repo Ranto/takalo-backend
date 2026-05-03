@@ -41,7 +41,7 @@ public class ProductPersistenceAdapter implements ProductRepository {
     @Override
     public PagedResponse<Product> findAll(int page, int size) {
         var pageable = PageRequest.of(page, size);
-        var entityPage = repository.findAllWithNameOrCategoryIdIn(null, null, pageable);
+        var entityPage = repository.findAllWithNameOrCategoryIdIn(null, null, false, false, pageable);
 
         return PaginationMapper.toPagedResponse(entityPage, productMapper::toDomain);
     }
@@ -55,9 +55,12 @@ public class ProductPersistenceAdapter implements ProductRepository {
     }
 
     @Override
-    public PagedResponse<Product> findByNameOrCategoryIds(String name, List<UUID> categoryIds, int page, int size) {
+    public PagedResponse<Product> findByNameOrCategoryIds(String name, List<UUID> categoryIds, boolean includeUncategorized, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size);
-        Page<ProductEntity> entityPage = repository.findAllWithNameOrCategoryIdIn(name, categoryIds, pageable);
+        List<UUID> normalizedIds = (categoryIds == null || categoryIds.isEmpty()) ? null : categoryIds;
+        boolean hasCategoryFilter = normalizedIds != null || includeUncategorized;
+        Page<ProductEntity> entityPage = repository.findAllWithNameOrCategoryIdIn(
+                name, normalizedIds, includeUncategorized, hasCategoryFilter, pageable);
         return PaginationMapper.toPagedResponse(entityPage, productMapper::toDomain);
     }
 

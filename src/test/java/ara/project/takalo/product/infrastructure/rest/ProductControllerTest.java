@@ -148,7 +148,7 @@ class ProductControllerTest {
         PagedResponse<Product> domainPage = new PagedResponse<>(List.of(), 0, 10, 0L, 0, true);
         PagedResponse<ProductResponse> responsePage = new PagedResponse<>(List.of(), 0, 10, 0L, 0, true);
 
-        when(service.searchByCategoriesOrName(eq(List.of(c1, c2)), eq("Pho"), eq(1), eq(20)))
+        when(service.searchByCategoriesOrName(eq(List.of(c1, c2)), eq("Pho"), eq(false), eq(1), eq(20)))
                 .thenReturn(domainPage);
         when(webMapper.toResponses(domainPage)).thenReturn(responsePage);
 
@@ -159,7 +159,7 @@ class ProductControllerTest {
                         .param("size", "20"))
                 .andExpect(status().isOk());
 
-        verify(service).searchByCategoriesOrName(List.of(c1, c2), "Pho", 1, 20);
+        verify(service).searchByCategoriesOrName(List.of(c1, c2), "Pho", false, 1, 20);
     }
 
     @Test
@@ -167,14 +167,14 @@ class ProductControllerTest {
         PagedResponse<Product> domainPage = new PagedResponse<>(List.of(), 0, 10, 0L, 0, true);
         PagedResponse<ProductResponse> responsePage = new PagedResponse<>(List.of(), 0, 10, 0L, 0, true);
 
-        when(service.searchByCategoriesOrName(eq(null), eq(null), eq(0), eq(10)))
+        when(service.searchByCategoriesOrName(eq(null), eq(null), eq(false), eq(0), eq(10)))
                 .thenReturn(domainPage);
         when(webMapper.toResponses(domainPage)).thenReturn(responsePage);
 
         mockMvc.perform(get("/api/v1/products/search"))
                 .andExpect(status().isOk());
 
-        verify(service).searchByCategoriesOrName(null, null, 0, 10);
+        verify(service).searchByCategoriesOrName(null, null, false, 0, 10);
     }
 
     @Test
