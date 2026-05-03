@@ -136,6 +136,18 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
             where.append(" AND LOWER(cat.label) LIKE LOWER(CONCAT('%', :categoryName, '%'))");
             params.put("categoryName", categoryName);
         }
+        if (query.budgetId() != null) {
+            where.append(" AND i.purchase.budgetId = :budgetId");
+            params.put("budgetId", query.budgetId());
+        }
+        if (query.productId() != null) {
+            where.append(" AND i.productId = :productId");
+            params.put("productId", query.productId());
+        }
+        if (query.categoryId() != null) {
+            where.append(" AND prod.categoryId = :categoryId");
+            params.put("categoryId", query.categoryId());
+        }
 
         String selectJpql = "SELECT new ara.project.takalo.purchase.domain.model.PurchaseItemDetail("
                 + "i.id, i.purchase.id, i.purchase.purchaseDate, "

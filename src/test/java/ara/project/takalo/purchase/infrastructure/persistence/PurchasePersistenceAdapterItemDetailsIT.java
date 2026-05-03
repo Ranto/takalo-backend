@@ -118,6 +118,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_sortedByDateDesc_returnsAllLines() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -136,6 +137,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_filteredByOwner_restrictsToAlice() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -151,6 +153,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_filteredByCategoryName_joinsToCurrentCategory() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, "laitiers",
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -166,6 +169,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_filteredByProductName_isCaseInsensitive() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, "PAIN", null,
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -182,6 +186,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
                 Instant.parse("2026-04-01T00:00:00Z"),
                 Instant.parse("2026-04-30T23:59:59Z"),
                 null, null,
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -197,6 +202,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_sortedByCategoryAsc_groupsByCategoryLabel() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.CATEGORY,
                 PurchaseItemDetailQuery.SortDirection.ASC,
                 0, 10);
@@ -222,6 +228,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_orphanProduct_returnsLineWithNullCategory() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, "supprimé", null,
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -239,6 +246,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_pagination_capsResultsAndComputesTotalPages() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 2);
@@ -255,6 +263,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_total_isComputedFromUnitPriceQuantityDiscount() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, "Lait", "laitiers",
+                null, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.ASC,
                 0, 10);
@@ -264,5 +273,69 @@ class PurchasePersistenceAdapterItemDetailsIT {
         assertThat(page.totalElements()).isEqualTo(1);
         // 2.10 * 3 - 0.30 = 6.00
         assertThat(page.content().getFirst().total()).isEqualByComparingTo(new BigDecimal("6.00"));
+    }
+
+    @Test
+    void searchItemDetails_filteredByProductId_returnsOnlyMatchingProduct() {
+        PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
+                null, null, null, null,
+                null, milkId, null,
+                PurchaseItemDetailQuery.SortField.DATE,
+                PurchaseItemDetailQuery.SortDirection.DESC,
+                0, 10);
+
+        PagedResponse<PurchaseItemDetail> page = adapter.searchItemDetails(q, null);
+
+        assertThat(page.totalElements()).isEqualTo(2);
+        assertThat(page.content()).allMatch(l -> milkId.equals(l.productId()));
+    }
+
+    @Test
+    void searchItemDetails_filteredByCategoryId_returnsItemsOfThatCategoryOnly() {
+        PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
+                null, null, null, null,
+                null, null, bakeryId,
+                PurchaseItemDetailQuery.SortField.DATE,
+                PurchaseItemDetailQuery.SortDirection.DESC,
+                0, 10);
+
+        PagedResponse<PurchaseItemDetail> page = adapter.searchItemDetails(q, null);
+
+        assertThat(page.totalElements()).isEqualTo(1);
+        assertThat(page.content().getFirst().productName()).isEqualTo("Pain");
+    }
+
+    @Test
+    void searchItemDetails_filteredByBudgetId_restrictsToParentBudget() {
+        UUID budgetA = UUID.randomUUID();
+        UUID budgetB = UUID.randomUUID();
+        PurchaseEntity withBudgetA = PurchaseEntity.builder()
+                .ownerId(aliceId)
+                .budgetId(budgetA)
+                .purchaseDate(Instant.parse("2026-03-01T08:00:00Z"))
+                .build();
+        withBudgetA.addItem(buildItem(milkId, "Lait", "1.00", 1.0, "0.00", "Aldi"));
+        PurchaseEntity withBudgetB = PurchaseEntity.builder()
+                .ownerId(aliceId)
+                .budgetId(budgetB)
+                .purchaseDate(Instant.parse("2026-03-02T08:00:00Z"))
+                .build();
+        withBudgetB.addItem(buildItem(breadId, "Pain", "1.00", 1.0, "0.00", "Aldi"));
+        em.persist(withBudgetA);
+        em.persist(withBudgetB);
+        em.flush();
+        em.clear();
+
+        PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
+                null, null, null, null,
+                budgetA, null, null,
+                PurchaseItemDetailQuery.SortField.DATE,
+                PurchaseItemDetailQuery.SortDirection.DESC,
+                0, 10);
+
+        PagedResponse<PurchaseItemDetail> page = adapter.searchItemDetails(q, null);
+
+        assertThat(page.totalElements()).isEqualTo(1);
+        assertThat(page.content().getFirst().productName()).isEqualTo("Lait");
     }
 }

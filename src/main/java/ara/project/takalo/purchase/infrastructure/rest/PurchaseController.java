@@ -200,6 +200,15 @@ public class PurchaseController {
             @Parameter(description = "Filtre partiel sur le libellé de la catégorie (insensible à la casse)")
             @RequestParam(required = false) String categoryName,
 
+            @Parameter(description = "Filtre exact sur l'identifiant du budget de l'achat parent")
+            @RequestParam(required = false) UUID budgetId,
+
+            @Parameter(description = "Filtre exact sur l'identifiant du produit")
+            @RequestParam(required = false) UUID productId,
+
+            @Parameter(description = "Filtre exact sur l'identifiant de la catégorie du produit")
+            @RequestParam(required = false) UUID categoryId,
+
             @Parameter(description = "Champ de tri : date | product | category", example = "date")
             @RequestParam(defaultValue = "date") String sort,
 
@@ -212,7 +221,7 @@ public class PurchaseController {
         PurchaseItemDetailQuery.SortField sortField = parseSort(sort);
         PurchaseItemDetailQuery.SortDirection dir = parseDirection(direction, sortField);
         PurchaseItemDetailQuery query = new PurchaseItemDetailQuery(
-                start, end, productName, categoryName, sortField, dir, page, size);
+                start, end, productName, categoryName, budgetId, productId, categoryId, sortField, dir, page, size);
         PagedResponse<PurchaseItemDetail> result = service.searchItemDetails(query);
         return result.map(purchaseItemDetailWebMapper::toResponse);
     }
