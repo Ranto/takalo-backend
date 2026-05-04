@@ -4,6 +4,7 @@ import ara.project.takalo.product.infrastructure.persistence.entities.ProductEnt
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -61,4 +62,8 @@ public interface JpaProductRepository extends JpaRepository<ProductEntity, UUID>
 
     @Query("SELECT p.categoryId as categoryId, COUNT(p.id) as count FROM ProductEntity p WHERE p.categoryId IN :ids GROUP BY p.categoryId")
     List<CategoryProductCount> countByCategoryIds(@Param("ids") Set<UUID> ids);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE ProductEntity p SET p.categoryId = :categoryId WHERE p.id IN :ids")
+    int updateCategoryByIds(@Param("ids") List<UUID> ids, @Param("categoryId") UUID categoryId);
 }

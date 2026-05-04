@@ -30,4 +30,6 @@ public interface ProductServicePort {
     Product findOrCreateByName(String name);
 
     Map<UUID, Long> countByCategoryIds(Set<UUID> categoryIds);
+
+    int bulkUpdateCategory(List<UUID> productIds, UUID categoryId);
 }

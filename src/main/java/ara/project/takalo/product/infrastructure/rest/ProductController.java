@@ -2,6 +2,7 @@ package ara.project.takalo.product.infrastructure.rest;
 
 import ara.project.takalo.product.application.port.in.ProductServicePort;
 import ara.project.takalo.product.domain.model.Product;
+import ara.project.takalo.product.infrastructure.rest.dto.ProductBulkCategoryRequest;
 import ara.project.takalo.product.infrastructure.rest.dto.ProductRequest;
 import ara.project.takalo.product.infrastructure.rest.dto.ProductResponse;
 import ara.project.takalo.product.infrastructure.rest.mapper.ProductWebMapper;
@@ -22,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -121,6 +123,20 @@ public class ProductController {
                 null);
         Product updated = productServicePort.update(id, toUpdate);
         return webMapper.toResponse(updated);
+    }
+
+    @PatchMapping("/category")
+    @PreAuthorize("hasAuthority('PERM_product:write')")
+    @Operation(summary = "Assigner une catégorie à plusieurs produits",
+            description = "Met à jour la catégorie de tous les produits ciblés. categoryId à null retire la catégorie.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Mise à jour effectuée"),
+            @ApiResponse(responseCode = "400", description = "Données invalides",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Integer> bulkUpdateCategory(@Valid @RequestBody ProductBulkCategoryRequest request) {
+        int updated = productServicePort.bulkUpdateCategory(request.productIds(), request.categoryId());
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")

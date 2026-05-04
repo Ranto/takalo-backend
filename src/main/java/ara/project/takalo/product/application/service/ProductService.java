@@ -106,4 +106,12 @@ public class ProductService implements ProductServicePort {
         }
         return repository.countByCategoryIds(categoryIds);
     }
+
+    @Override
+    public int bulkUpdateCategory(List<UUID> productIds, UUID categoryId) {
+        if (productIds == null || productIds.isEmpty()) {
+            return 0;
+        }
+        return repository.updateCategoryByIds(productIds, categoryId);
+    }
 }

@@ -88,6 +88,14 @@ public class ProductPersistenceAdapter implements ProductRepository {
     }
 
     @Override
+    public int updateCategoryByIds(List<UUID> productIds, UUID categoryId) {
+        if (productIds == null || productIds.isEmpty()) {
+            return 0;
+        }
+        return repository.updateCategoryByIds(productIds, categoryId);
+    }
+
+    @Override
     public Map<UUID, Long> countByCategoryIds(Set<UUID> categoryIds) {
         if (categoryIds == null || categoryIds.isEmpty()) {
             return Map.of();
