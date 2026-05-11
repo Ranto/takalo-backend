@@ -17,6 +17,8 @@ public record PurchaseItemDetailResponse(
         UUID categoryId,
         @Schema(description = "Libellé de la catégorie courante (null si produit supprimé ou sans catégorie)")
         String categoryName,
+        @Schema(description = "Identifiant du budget de l'achat parent (null si sans budget)") UUID budgetId,
+        @Schema(description = "Nom du budget de l'achat parent (null si sans budget ou budget supprimé)") String budgetName,
         @Schema(description = "Prix unitaire") BigDecimal unitPrice,
         @Schema(description = "Quantité achetée") Double quantity,
         @Schema(description = "Remise appliquée") BigDecimal discount,

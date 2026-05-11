@@ -218,6 +218,9 @@ public class PurchaseController {
             @Parameter(description = "Filtre exact sur l'identifiant du budget de l'achat parent")
             @RequestParam(required = false) UUID budgetId,
 
+            @Parameter(description = "Inclure aussi les lignes d'achat sans budget. Si budgetId est omis, ne renvoie que les lignes sans budget.")
+            @RequestParam(defaultValue = "false") boolean includeUnbudgeted,
+
             @Parameter(description = "Filtre exact sur l'identifiant du produit")
             @RequestParam(required = false) UUID productId,
 
@@ -236,7 +239,8 @@ public class PurchaseController {
         PurchaseItemDetailQuery.SortField sortField = parseSort(sort);
         PurchaseItemDetailQuery.SortDirection dir = parseDirection(direction, sortField);
         PurchaseItemDetailQuery query = new PurchaseItemDetailQuery(
-                start, end, productName, categoryName, budgetId, productId, categoryId, sortField, dir, page, size);
+                start, end, productName, categoryName, budgetId, includeUnbudgeted, productId, categoryId,
+                sortField, dir, page, size);
         PagedResponse<PurchaseItemDetail> result = service.searchItemDetails(query);
         return result.map(purchaseItemDetailWebMapper::toResponse);
     }

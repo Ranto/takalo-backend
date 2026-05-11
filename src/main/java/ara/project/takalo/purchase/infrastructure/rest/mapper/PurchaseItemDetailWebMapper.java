@@ -16,6 +16,8 @@ public class PurchaseItemDetailWebMapper {
                 domain.productName(),
                 domain.categoryId(),
                 domain.categoryLabel(),
+                domain.budgetId(),
+                domain.budgetName(),
                 domain.unitPrice(),
                 domain.quantity(),
                 domain.discount(),

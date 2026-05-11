@@ -118,7 +118,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_sortedByDateDesc_returnsAllLines() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -137,7 +137,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_filteredByOwner_restrictsToAlice() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -153,7 +153,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_filteredByCategoryName_joinsToCurrentCategory() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, "laitiers",
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -169,7 +169,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_filteredByProductName_isCaseInsensitive() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, "PAIN", null,
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -186,7 +186,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
                 Instant.parse("2026-04-01T00:00:00Z"),
                 Instant.parse("2026-04-30T23:59:59Z"),
                 null, null,
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -202,7 +202,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_sortedByCategoryAsc_groupsByCategoryLabel() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.CATEGORY,
                 PurchaseItemDetailQuery.SortDirection.ASC,
                 0, 10);
@@ -228,7 +228,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_orphanProduct_returnsLineWithNullCategory() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, "supprimé", null,
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -246,7 +246,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_pagination_capsResultsAndComputesTotalPages() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 2);
@@ -263,7 +263,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_total_isComputedFromUnitPriceQuantityDiscount() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, "Lait", "laitiers",
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.ASC,
                 0, 10);
@@ -279,7 +279,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_filteredByProductId_returnsOnlyMatchingProduct() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
-                null, milkId, null,
+                null, false, milkId, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -294,7 +294,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
     void searchItemDetails_filteredByCategoryId_returnsItemsOfThatCategoryOnly() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
-                null, null, bakeryId,
+                null, false, null, bakeryId,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -328,7 +328,7 @@ class PurchasePersistenceAdapterItemDetailsIT {
 
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
-                budgetA, null, null,
+                budgetA, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);

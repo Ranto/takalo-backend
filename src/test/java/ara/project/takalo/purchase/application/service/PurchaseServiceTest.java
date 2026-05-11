@@ -527,7 +527,7 @@ class PurchaseServiceTest {
     void searchItemDetails_withReadAny_passesNullOwner() {
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, null, null,
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.DATE,
                 PurchaseItemDetailQuery.SortDirection.DESC,
                 0, 10);
@@ -545,7 +545,7 @@ class PurchaseServiceTest {
         UUID currentUser = UUID.randomUUID();
         PurchaseItemDetailQuery q = new PurchaseItemDetailQuery(
                 null, null, "lait", "produits laitiers",
-                null, null, null,
+                null, false, null, null,
                 PurchaseItemDetailQuery.SortField.PRODUCT,
                 PurchaseItemDetailQuery.SortDirection.ASC,
                 0, 10);

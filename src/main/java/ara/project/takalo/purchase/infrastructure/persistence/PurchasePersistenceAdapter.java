@@ -122,6 +122,7 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
                 FROM PurchaseItemEntity i
                 LEFT JOIN ProductEntity prod ON prod.id = i.productId
                 LEFT JOIN ProductCategoryEntity cat ON cat.id = prod.categoryId
+                LEFT JOIN BudgetEntity bud ON bud.id = i.purchase.budgetId
                 """;
 
         // WHERE dynamique : on n'ajoute un prédicat que si la valeur est présente.
@@ -151,9 +152,14 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
             where.append(" AND LOWER(cat.label) LIKE LOWER(CONCAT('%', :categoryName, '%'))");
             params.put("categoryName", categoryName);
         }
-        if (query.budgetId() != null) {
+        if (query.budgetId() != null && query.includeUnbudgeted()) {
+            where.append(" AND (i.purchase.budgetId = :budgetId OR i.purchase.budgetId IS NULL)");
+            params.put("budgetId", query.budgetId());
+        } else if (query.budgetId() != null) {
             where.append(" AND i.purchase.budgetId = :budgetId");
             params.put("budgetId", query.budgetId());
+        } else if (query.includeUnbudgeted()) {
+            where.append(" AND i.purchase.budgetId IS NULL");
         }
         if (query.productId() != null) {
             where.append(" AND i.productId = :productId");
@@ -168,6 +174,7 @@ public class PurchasePersistenceAdapter implements PurchaseRepository {
                 + "i.id, i.purchase.id, i.purchase.purchaseDate, "
                 + "i.productId, i.productName, "
                 + "prod.categoryId, cat.label, "
+                + "i.purchase.budgetId, bud.name, "
                 + "i.unitPrice, i.quantity, i.discount, i.storeName) "
                 + fromAndJoins + where
                 + " ORDER BY " + orderByExpr + " " + direction + ", i.id ASC";
