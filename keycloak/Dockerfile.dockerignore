@@ -1,0 +1,4 @@
+# Ignore tout par défaut, on n'a besoin que du dossier des thèmes.
+*
+!keycloak-themes
+!keycloak-themes/**

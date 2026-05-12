@@ -18,11 +18,12 @@ services:
       - takalo-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
+    image: ghcr.io/${GITHUB_USER}/takalo-keycloak:${KEYCLOAK_VERSION:-latest}
     container_name: takalo-keycloak
     restart: unless-stopped
     command:
       - start
+      - --optimized
     depends_on:
       postgres:
         condition: service_healthy
@@ -32,8 +33,6 @@ services:
       KC_HOSTNAME: https://auth.takalo.ranto.ovh
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
-      KC_HEALTH_ENABLED: "true"
-      KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
@@ -41,7 +40,6 @@ services:
       - "127.0.0.1:8088:8080"
     volumes:
       - keycloak-data:/opt/keycloak/data
-      - ./keycloak-themes:/opt/keycloak/themes:ro
     networks:
       - takalo-network
 
