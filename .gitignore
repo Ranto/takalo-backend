@@ -38,3 +38,4 @@ plan/
 .env
 .env.local
 .env.prod
+keycloak-themes/takalo-legacy/
