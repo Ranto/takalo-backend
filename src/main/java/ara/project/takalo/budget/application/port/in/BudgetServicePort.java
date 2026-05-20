@@ -49,6 +49,13 @@ public interface BudgetServicePort {
     /** Crédit depuis une source externe. Mute le fond du budget. */
     BudgetWithBalance creditFromExternalSource(UUID budgetId, BudgetCreditCommand command);
 
+    /**
+     * Variante de {@link #creditFromExternalSource} qui renvoie le mouvement créé, utile aux
+     * contextes qui ont besoin de tracer l'opération (par exemple la régularisation d'une
+     * vérification de caisse). Les règles d'autorisation et de validation sont identiques.
+     */
+    BudgetMovement creditFromExternalSourceWithMovement(UUID budgetId, BudgetCreditCommand command);
+
     /** Transfert entre deux budgets. Mute les deux fonds, dans la même transaction. */
     BudgetTransferResult transfer(BudgetTransferCommand command);
 

@@ -196,6 +196,16 @@ public class BudgetService implements BudgetServicePort {
 
     @Override
     public BudgetWithBalance creditFromExternalSource(UUID budgetId, BudgetCreditCommand command) {
+        CreditExternalResult result = doCreditFromExternalSource(budgetId, command);
+        return withBalance(result.budget());
+    }
+
+    @Override
+    public BudgetMovement creditFromExternalSourceWithMovement(UUID budgetId, BudgetCreditCommand command) {
+        return doCreditFromExternalSource(budgetId, command).movement();
+    }
+
+    private CreditExternalResult doCreditFromExternalSource(UUID budgetId, BudgetCreditCommand command) {
         if (command.amount() == null || command.amount().signum() <= 0) {
             throw new InvalidOperationException("Le montant du crédit doit être strictement positif");
         }
@@ -209,7 +219,7 @@ public class BudgetService implements BudgetServicePort {
         Budget updated = withFund(budget, budget.initialFund().add(command.amount()));
         Budget saved = repository.save(updated);
 
-        movementRepository.save(new BudgetMovement(
+        BudgetMovement movement = movementRepository.save(new BudgetMovement(
                 null,
                 saved.id(),
                 BudgetMovementType.CREDIT_EXTERNE,
@@ -224,7 +234,10 @@ public class BudgetService implements BudgetServicePort {
                 null
         ));
 
-        return withBalance(saved);
+        return new CreditExternalResult(saved, movement);
+    }
+
+    private record CreditExternalResult(Budget budget, BudgetMovement movement) {
     }
 
     @Override
