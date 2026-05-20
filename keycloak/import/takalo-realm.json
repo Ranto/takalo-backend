@@ -1,0 +1,96 @@
+{
+  "realm": "takalo",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 1800,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "loginTheme": "takalo",
+  "clients": [
+    {
+      "clientId": "takalo-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:4200/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      }
+    },
+    {
+      "clientId": "takalo-backend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [],
+      "webOrigins": []
+    }
+  ],
+  "users": [
+    {
+      "id": "1cf30e4b-7009-4e88-879f-e5db2681ab98",
+      "username": "ranto",
+      "email": "andrianjafy.ranto@gmail.com",
+      "emailVerified": true,
+      "firstName": "Ranto",
+      "lastName": "ANDRIANJAFY",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "rantoranto",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "15cac5a1-923e-4356-9cd2-e76f9eece555",
+      "username": "tahiri",
+      "email": "tahiriniaina.andriantsoa@gmail.com",
+      "emailVerified": true,
+      "firstName": "Tahiriniaina",
+      "lastName": "RANDRIANIRIANTSOA",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "tahiritahiri",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "username": "admin",
+      "email": "admin@takalo.local",
+      "emailVerified": true,
+      "firstName": "Takalo",
+      "lastName": "Admin",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadmin",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
