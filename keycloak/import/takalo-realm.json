@@ -52,6 +52,7 @@
       "firstName": "Ranto",
       "lastName": "ANDRIANJAFY",
       "enabled": true,
+      "realmRoles": ["default-roles-takalo"],
       "credentials": [
         {
           "type": "password",
@@ -68,6 +69,7 @@
       "firstName": "Tahiriniaina",
       "lastName": "RANDRIANIRIANTSOA",
       "enabled": true,
+      "realmRoles": ["default-roles-takalo"],
       "credentials": [
         {
           "type": "password",
@@ -84,6 +86,7 @@
       "firstName": "Takalo",
       "lastName": "Admin",
       "enabled": true,
+      "realmRoles": ["default-roles-takalo"],
       "credentials": [
         {
           "type": "password",
